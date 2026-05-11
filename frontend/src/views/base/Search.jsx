@@ -1,7 +1,8 @@
 import { useEffect, useState, useContext } from 'react';
 import BaseHeader from '../partials/BaseHeader';
 import BaseFooter from '../partials/BaseFooter';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import axios from 'axios';
 import CartId from '../plugin/cartId';
 import GetCurrentAddress from '../plugin/UserCountry';
 import UserData from '../plugin/UserData';
@@ -18,35 +19,100 @@ import { userId } from '../../utils/constants';
 import { CartContext } from '../plugin/Context';
 
 function Search() {
+  const [allCourses, setAllCourses] = useState([])
   const [courses, setCourses] = useState([])
+  const [allBooks, setAllBooks] = useState([])
+  const [books, setBooks] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [cartCount, setCartCount] = useContext(CartContext);
+  const location = useLocation();
 
   const country = GetCurrentAddress().country;
   // const userId = UserData()?.user_id; // user_id is not defined 
   const cartId = CartId();
+  const searchParams = new URLSearchParams(location.search);
+  const queryParam = searchParams.get('query') || '';
 
 
   const fetchCourse = async () => {
     setIsLoading(true);
     try {
-      await useAxios().get(`/course/course-list/`).then((res) => {
-        setCourses(res.data);
+      await axios.get(`http://127.0.0.1:8000/api/v1/course/course-list/`).then((res) => {
+        setAllCourses(res.data || []);
+        setCourses(res.data || []);
         setIsLoading(false);
       })
     } catch (error) {
       console.error("Error fetching courses:", error.response?.data || error.message);
+      setAllCourses([]);
+      setCourses([]);
+      setIsLoading(false);
 
 
     }
 
   }
 
+  const fetchBooks = async () => {
+    setIsLoading(true);
+    try {
+      await axios.get(`http://127.0.0.1:8000/api/v1/books/`).then((res) => {
+        setAllBooks(res.data || []);
+        setBooks(res.data || []);
+        setIsLoading(false);
+      });
+    } catch (error) {
+      console.error("Error fetching books:", error.response?.data || error.message);
+      setAllBooks([]);
+      setBooks([]);
+      setIsLoading(false);
+    }
+  }
+
   useEffect(() => {
     fetchCourse();
+    fetchBooks();
   }, [])
 
   console.log(courses);
+
+  useEffect(() => {
+    const query = queryParam.toLowerCase().trim();
+
+    if (!query) {
+      setCourses(allCourses);
+      setBooks(allBooks);
+      return;
+    }
+
+    const filteredCourses = allCourses.filter((course) => {
+      const title = course?.title || '';
+      const description = course?.description || '';
+      const tags = course?.tags || '';
+      const categoryTitle = course?.category?.title || course?.category || '';
+      const instructorName = course?.teacher?.full_name || course?.teacher?.teacher_name || '';
+
+      return [title, description, tags, categoryTitle, instructorName]
+        .join(' ')
+        .toLowerCase()
+        .includes(query);
+    });
+
+    setCourses(filteredCourses);
+    const filteredBooks = allBooks.filter((book) => {
+      const title = book?.title || '';
+      const description = book?.description || '';
+      const category = book?.category?.title || book?.category || '';
+      const author = book?.author || '';
+
+      return [title, description, category, author]
+        .join(' ')
+        .toLowerCase()
+        .includes(query);
+    });
+
+    setBooks(filteredBooks);
+  }, [queryParam, allCourses, allBooks]);
 
 
 
@@ -86,27 +152,6 @@ function Search() {
     }
   };
 
-  //search feature 
-
-  const [searchQuery, setSearchQuery] = useState("");
-  console.log(searchQuery);
-
-  const handleSearch = (e) =>{
-    const query = e.target.value.toLowerCase();
-    setSearchQuery(query)
-
-    if (query === "") {
-      fetchCourse(); // Fetches all courses when the search is cleared.
-    } else {
-      const filteredCourses = courses.filter((course) => {
-        return course.title.toLowerCase().includes(query); // Use `includes` here.
-      });
-      setCourses(filteredCourses); // Update the state with filtered courses.
-    }
-    
-  }
-  
-
   return (
     <>
       <BaseHeader />
@@ -118,20 +163,8 @@ function Search() {
             <div className="col-12">
               <div className="mb-6">
                 <h2 className="mb-1 h1">
-                  Showing Results for "{searchQuery || "No Search Query"}"
+                  Showing Results for "{queryParam || "No Search Query"}"
                 </h2>
-              </div>
-            </div>
-            <div className="row">
-              <div className="col-lg-6">
-                <input
-                  type="text"
-                  className="form-control lg mt-3"
-                  placeholder="Search Courses..."
-                  name=""
-                  id=""
-                  onChange={handleSearch}
-                />
               </div>
             </div>
           </div>
@@ -140,7 +173,7 @@ function Search() {
               <div className="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
                 {/* Add courses from index.jsx */}
                 {courses?.map((c, index) => (
-                  <div className="col">
+              <div className="col" key={c.id || index}>
                     {/* Card */}
                     <div className="card card-hover">
                       <Link to={`/course-detail/${c.slug}/`}>
@@ -164,7 +197,7 @@ function Search() {
                           </a>
                         </div>
                         <h4 className="mb-2 text-truncate-line-2 ">
-                          <Link to={`/course-detail/slug/`} className="text-inherit text-decoration-none text-dark fs-5">
+                          <Link to={`/course-detail/${c.slug}/`} className="text-inherit text-decoration-none text-dark fs-5">
                             {c.title}
                           </Link>
                         </h4>
@@ -187,7 +220,7 @@ function Search() {
                       <div className="card-footer">
                         <div className="row align-items-center g-0">
                           <div className="col">
-                            <h5 className="mb-0">${c.price}</h5>
+                            <h5 className="mb-0">${Number(c.price).toFixed(2)}</h5>
                           </div>
                           <div className="col-auto">
                             <button type='button' onClick={() => addToCart(c.id, userId, c.price, country, cartId)}
@@ -203,6 +236,60 @@ function Search() {
                     </div>
                   </div>
                 ))}
+              </div>
+
+              <div className="mt-5">
+                <h3 className="mb-3">Books</h3>
+                {books?.length > 0 ? (
+                  <div className="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
+                    {books.map((book) => (
+                      <div className="col" key={book.id}>
+                        <div className="card card-hover">
+                          <Link to={`/books/books-detail/${book.id}/`}>
+                            <img
+                              src={book.image_url || book.image || 'https://via.placeholder.com/600x400?text=Book+Image'}
+                              alt={book.title}
+                              className="card-img-top"
+                              style={{ width: "100%", height: "200px", objectFit: "cover" }}
+                            />
+                          </Link>
+                          <div className="card-body">
+                            <div className="d-flex justify-content-between align-items-center mb-3">
+                              <div>
+                                <span className="badge bg-info">Book</span>
+                                <span className="badge bg-success ms-2">{book.author}</span>
+                              </div>
+                              <a href="#" className="fs-5">
+                                <i className="fas fa-heart text-danger align-middle" />
+                              </a>
+                            </div>
+                            <h4 className="mb-2 text-truncate-line-2">
+                              <Link to={`/books/books-detail/${book.id}/`} className="text-inherit text-decoration-none text-dark fs-5">
+                                {book.title}
+                              </Link>
+                            </h4>
+                            <small>By: {book.author}</small> <br />
+                            <small>{book.category || 'Book'} </small>
+                          </div>
+                          <div className="card-footer">
+                            <div className="row align-items-center g-0">
+                              <div className="col">
+                                <h5 className="mb-0">${Number(book.price).toFixed(2)}</h5>
+                              </div>
+                              <div className="col-auto">
+                                <Link to={`/books/books-detail/${book.id}/`} className="text-inherit text-decoration-none btn btn-primary">
+                                  View Details <i className="fas fa-arrow-right text-primary align-middle me-2 text-white" />
+                                </Link>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  !isLoading && <p>No books matched your search.</p>
+                )}
               </div>
 
               <nav className="d-flex mt-5">

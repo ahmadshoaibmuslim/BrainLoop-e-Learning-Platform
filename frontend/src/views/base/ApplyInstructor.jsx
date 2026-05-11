@@ -1,286 +1,430 @@
-import React, { useState,useEffect } from "react";
-import BaseHeader from '../partials/BaseHeader'
-import BaseFooter from '../partials/BaseFooter'
-import toast from "../plugin/toast";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Cookies from "js-cookie"; // ✅ Add this!
+import Cookies from "js-cookie";
+
+import BaseHeader from "../partials/BaseHeader";
+import BaseFooter from "../partials/BaseFooter";
+import toast from "../plugin/toast";
+import "../styles/applyInstructor.css";
+
+const steps = [
+  {
+    number: 1,
+    title: "Working title",
+    subtitle: "Give your learning module a clear name.",
+  },
+  {
+    number: 2,
+    title: "Category",
+    subtitle: "Choose the topic that best fits your expertise.",
+  },
+  {
+    number: 3,
+    title: "Intended learners",
+    subtitle: "Who will benefit from this learning path?",
+  },
+  {
+    number: 4,
+    title: "Learning objectives",
+    subtitle: "What will students learn by the end?",
+  },
+  {
+    number: 5,
+    title: "Prerequisites",
+    subtitle: "What should learners know before starting?",
+  },
+  {
+    number: 6,
+    title: "Time commitment",
+    subtitle: "Help students understand the expected pace.",
+  },
+  {
+    number: 7,
+    title: "Review and submit",
+    subtitle: "Send your request for admin approval.",
+  },
+];
+
+const defaultFormData = {
+  title: "",
+  category: "",
+  learningObjectives: [""],
+  intendedLearners: [""],
+  prerequisites: [""],
+  timeCommitment: "",
+};
 
 const CourseCreationForm = ({ userToken, courseId }) => {
-    const navigate = useNavigate();
-    const [step, setStep] = useState(1);
-    const [isSubmitted, setIsSubmitted] = useState(false);
-    const [isApproved, setIsApproved] = useState(null);
-    const [feedback, setFeedback] = useState("");
+  const navigate = useNavigate();
+  const [step, setStep] = useState(1);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isApproved, setIsApproved] = useState(null);
+  const [feedback, setFeedback] = useState("");
+  const [submitError, setSubmitError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState(defaultFormData);
 
-    const [formData, setFormData] = useState({
-        title: "",
-        category: "",
-        learningObjectives: [""],  // ✅ Initialize as array
-        intendedLearners: [""],    // ✅ Initialize as array
-        prerequisites: [""],       // ✅ Initialize as array
-        timeCommitment: "",
-    });
+  useEffect(() => {
+    checkApprovalStatus();
+  }, []);
 
-    useEffect(() => {
-        checkApprovalStatus(); // Check approval status when component loads
-    }, []);
-    
-    
-    console.log("Course ID:", courseId); // Debugging check
+  const currentStepMeta = steps[step - 1];
+  const progressValue = Math.round((step / steps.length) * 100);
 
-    const checkApprovalStatus = async () => {
-        if (!courseId) {
-            console.error("Error: courseId is missing or undefined.");
-            return;
-        }
+  const checkApprovalStatus = async () => {
+    if (!courseId) {
+      return;
+    }
 
-        try {
-            const response = await fetch(`http://127.0.0.1:8000/api/v1/learning-modules/${courseId}/approval-status/`, {
-                method: "GET",
-                headers: {
-                    Authorization: `Bearer ${userToken}`,
-                },
-            });
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/v1/learning-modules/${courseId}/status/`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        },
+      );
 
-            if (!response.ok) throw new Error("Failed to fetch course status");
+      if (!response.ok) {
+        throw new Error("Failed to fetch course status");
+      }
 
-            const data = await response.json();
-            setIsApproved(data.is_approved);
-            setFeedback(data.feedback);
-        } catch (error) {
-            console.error("Error checking approval status:", error);
-        }
-    };
+      const data = await response.json();
+      setIsApproved(data.is_approved);
+      setFeedback(data.feedback || "");
+    } catch (error) {
+      console.error("Error checking approval status:", error);
+    }
+  };
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData({ ...formData, [name]: value });
-    };
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
-    const handleArrayChange = (e, index, field) => {
-        const updatedArray = [...formData[field]];
-        updatedArray[index] = e.target.value;
-        setFormData({ ...formData, [field]: updatedArray });
-    };
+  const handleArrayChange = (e, index, field) => {
+    const updatedArray = [...formData[field]];
+    updatedArray[index] = e.target.value;
+    setFormData((prev) => ({ ...prev, [field]: updatedArray }));
+  };
 
-    const nextStep = () => {
-        setStep(step + 1);
-    };
+  const addArrayField = (field) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: [...prev[field], ""],
+    }));
+  };
 
-    const prevStep = () => {
-        setStep(step - 1);
-    };
+  const removeArrayField = (field, index) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: prev[field].length > 1 ? prev[field].filter((_, itemIndex) => itemIndex !== index) : [""],
+    }));
+  };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-    
-        let userToken = Cookies.get("access_token");
-    
-        if (!userToken) {
-            console.error("Authentication failed: No valid token.");
-            return;
-        }
-    
-        console.log("Using Token:", userToken);
-    
-        // ✅ Check if values exist before converting to JSON
-        if (!formData.learningObjectives || !formData.intendedLearners || !formData.prerequisites) {
-            console.error("Error: Missing required fields.");
-            return;
-        }
-    
-        console.log("learning_objectives (JSON):", JSON.stringify(formData.learningObjectives));
-        console.log("intended_learners (JSON):", JSON.stringify(formData.intendedLearners));
-        console.log("prerequisites (JSON):", JSON.stringify(formData.prerequisites));
-    
-        const formattedData = new FormData();
-        formattedData.append("title", formData.title);
-        formattedData.append("category", formData.category);
-        formattedData.append("time_commitment", formData.timeCommitment);
-        
-        // ✅ Convert arrays to JSON before appending
-        formattedData.append("learning_objectives", JSON.stringify(formData.learningObjectives));
-        formattedData.append("intended_learners", JSON.stringify(formData.intendedLearners));
-        formattedData.append("prerequisites", JSON.stringify(formData.prerequisites));
-    
-        try {
-            const response = await fetch("http://127.0.0.1:8000/api/v1/learning-modules/", {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${userToken}`,
-                },
-                body: formattedData,
-            });
-    
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Error ${response.status}: ${errorText}`);
-            }
-    
-            toast().fire({
-                icon: "success",
-                title: "✅ Your request has been submitted. Please wait for admin approval",
-            });
-    
-            navigate("/instructor/dashboard/");
-        } catch (error) {
-            console.error("Error submitting form:", error);
-        }
-    };
+  const nextStep = () => {
+    setStep((prev) => Math.min(prev + 1, steps.length));
+  };
 
+  const prevStep = () => {
+    setStep((prev) => Math.max(prev - 1, 1));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitError("");
+
+    const accessToken = userToken || Cookies.get("access_token");
+    if (!accessToken) {
+      setSubmitError("You need to sign in before submitting your instructor application.");
+      toast().fire({
+        icon: "warning",
+        title: "Please sign in before submitting.",
+      });
+      return;
+    }
+
+    const formattedData = new FormData();
+    formattedData.append("title", formData.title);
+    formattedData.append("category", formData.category);
+    formattedData.append("time_commitment", formData.timeCommitment);
+    formattedData.append("learning_objectives", JSON.stringify(formData.learningObjectives));
+    formattedData.append("intended_learners", JSON.stringify(formData.intendedLearners));
+    formattedData.append("prerequisites", JSON.stringify(formData.prerequisites));
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/v1/learning-modules/", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: formattedData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error ${response.status}: ${errorText}`);
+      }
+
+      setIsSubmitted(true);
+      // Store submission state in localStorage so header can show "Application Pending"
+      localStorage.setItem("instructor_application_pending", "true");
+      toast().fire({
+        icon: "success",
+        title: "Your request has been submitted. Please wait for admin approval.",
+      });
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      setSubmitError(error.message || "Submission failed. Please try again.");
+      toast().fire({
+        icon: "error",
+        title: "Unable to submit your request.",
+        text: error.message || "Please check the form and try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const renderProgressDots = () => (
+    <div className="apply-stepper">
+      {steps.map((item) => (
+        <div key={item.number} className={`apply-step ${step >= item.number ? "active" : ""}`}>
+          <span>{item.number}</span>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderArrayFields = (field, label) => {
+    const values = formData[field];
     return (
-        <>
-            <BaseHeader />
-            <div className="container-fluid d-flex flex-column justify-content-center align-items-center vh-100">
-                <div className="card p-5 shadow-lg w-75 h-75">
-                    <div className="container-fluid d-flex flex-column justify-content-center align-items-center vh-100">
-                        <div className="card p-5 shadow-lg w-75 h-75">
-                            {isApproved === false ? (
-                                <h2 className="text-warning text-center">⏳ Your course is still under review.</h2>
-                            ) : isSubmitted ? (
-                                <h2 className="text-success text-center">✅ Your course has been submitted for review!</h2>
-                            ) : (
-                                <>
-                                    {step === 1 && (
-                                        <>
-                                            <h2 className="text-primary text-center">How about a working title?</h2>
-                                            <p className="text-center">It's ok if you can't think of a good title now. You can change it later.</p>
-                                            <input
-                                                type="text"
-                                                name="title"
-                                                className="form-control"
-                                                placeholder="Enter Course Title"
-                                                required
-                                                value={formData.title}
-                                                onChange={handleChange}
-
-
-                                            />
-                                            <div className="d-flex justify-content-end mt-3">
-                                                <button className="btn btn-primary" onClick={nextStep}>Continue</button>
-                                            </div>
-                                        </>
-                                    )}
-                                    {step === 2 && (
-                                        <>
-                                            <h2 className="text-primary text-center">What category best fits your knowledge?</h2>
-                                            <p className="text-center">If you're not sure, you can change it later.</p>
-                                            <select name="category" className="form-control" value={formData.category} onChange={handleChange}>
-                                                <option value="">Select Category</option>
-                                                <option>Web Development</option>
-                                                <option>Data Science</option>
-                                                <option>Business</option>
-                                                <option>Design</option>
-                                                <option>Marketing</option>
-                                                <option>Health & Fitness</option>
-                                                <option>Photography</option>
-                                                <option>Music</option>
-                                            </select>
-                                            <div className="d-flex justify-content-between mt-3">
-                                                <button className="btn btn-primary" onClick={prevStep}>Previous</button>
-                                                <button className="btn btn-primary" onClick={nextStep}>Continue</button>
-                                            </div>
-                                        </>
-                                    )}
-                                    {step === 3 && (
-                                        <>
-                                            <h2 className="text-primary text-center">Intended Learners</h2>
-                                            <p className="text-center">Describe who will benefit from your course.</p>
-                                            {formData.intendedLearners.map((learner, index) => (
-                                                <input
-                                                    key={index}
-                                                    type="text"
-                                                    className="form-control mb-2"
-                                                    required
-                                                    value={learner}  // Instead of value={learner.intendedLearners}
-                                                    placeholder={`Learner ${index + 1}`}
-                                                    onChange={(e) => handleArrayChange(e, index, "intendedLearners")}
-                                                />
-                                            ))}
-                                            <div className="d-flex justify-content-between mt-3">
-                                                <button className="btn btn-primary" onClick={prevStep}>Previous</button>
-                                                <button className="btn btn-primary" onClick={nextStep}>Continue</button>
-                                            </div>
-                                        </>
-                                    )}
-                                    {step === 4 && (
-                                        <>
-                                            <h2 className="text-primary text-center">What will students learn in your course?</h2>
-                                            <p className="text-center">Enter at least 4 learning objectives.</p>
-                                            {formData.learningObjectives.map((objective, index) => (
-                                                <input
-                                                    key={index}
-                                                    type="text"
-                                                    className="form-control mb-2"
-                                                    required
-                                                    value={objective.learningObjectives}
-                                                    placeholder={`Objective ${index + 1}`}
-                                                    onChange={(e) => handleArrayChange(e, index, "learningObjectives")}
-                                                />
-                                            ))}
-                                            <div className="d-flex justify-content-between mt-3">
-                                                <button className="btn btn-primary" onClick={prevStep}>Previous</button>
-                                                <button className="btn btn-primary" onClick={nextStep}>Continue</button>
-                                            </div>
-                                        </>
-                                    )}
-                                    {step === 5 && (
-                                        <>
-                                            <h2 className="text-primary text-center">What are the prerequisites for your course?</h2>
-                                            <p className="text-center">List any necessary knowledge or tools.</p>
-                                            {formData.prerequisites.map((prereq, index) => (
-                                                <input
-                                                    key={index}
-                                                    type="text"
-                                                    className="form-control mb-2"
-                                                    required
-                                                    value={prereq.prerequisites}
-
-                                                    placeholder={`Requirement ${index + 1}`}
-                                                    onChange={(e) => handleArrayChange(e, index, "prerequisites")}
-                                                />
-                                            ))}
-                                            <div className="d-flex justify-content-between mt-3">
-                                                <button className="btn btn-primary" onClick={prevStep}>Previous</button>
-                                                <button className="btn btn-primary" onClick={nextStep}>Continue</button>
-                                            </div>
-                                        </>
-                                    )}
-                                    {step === 6 && (
-                                        <>
-                                            <h2 className="text-primary text-center">How much time can you spend per week?</h2>
-                                            <p className="text-center">Choose an option.</p>
-                                            <select name="timeCommitment" className="form-control" onChange={handleChange}>
-                                                <option value="">Select Time Commitment</option>
-                                                <option>0-2 hours</option>
-                                                <option>2-4 hours</option>
-                                                <option>5+ hours</option>
-                                                <option>Not sure yet</option>
-                                            </select>
-                                            <div className="d-flex justify-content-between mt-3">
-                                                <button className="btn btn-primary" onClick={prevStep}>Previous</button>
-                                                <button className="btn btn-primary" onClick={nextStep}>Continue</button>
-                                            </div>
-                                        </>
-                                    )}
-                                    {step === 7 && (
-                                        <>
-                                            <h2 className="text-primary text-center">Submit for Review</h2>
-                                            <p className="text-center">Click below to submit your course for review.</p>
-                                            <div className="d-flex justify-content-between mt-3">
-                                                <button className="btn btn-primary" onClick={prevStep}>Previous</button>
-                                                <button type="submit" className="btn btn-primary" onClick={handleSubmit}>Submit for Review</button>
-                                            </div>
-                                        </>
-                                    )}
-                                </>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <BaseFooter />
-        </>
+      <div className="stack-group">
+        {values.map((value, index) => (
+          <div className="array-row" key={`${field}-${index}`}>
+            <input
+              type="text"
+              className="form-control apply-input"
+              required
+              value={value}
+              placeholder={`${label} ${index + 1}`}
+              onChange={(e) => handleArrayChange(e, index, field)}
+            />
+            <button
+              type="button"
+              className="apply-icon-btn apply-remove-btn"
+              onClick={() => removeArrayField(field, index)}
+              aria-label={`Remove ${label.toLowerCase()} ${index + 1}`}
+            >
+              −
+            </button>
+          </div>
+        ))}
+        <button type="button" className="apply-link-btn" onClick={() => addArrayField(field)}>
+          + Add another {label.toLowerCase()}
+        </button>
+      </div>
     );
+  };
+
+  return (
+    <>
+      <BaseHeader />
+      <main className="apply-instructor-page">
+        <section className="apply-hero">
+          <div className="apply-orb apply-orb-left" />
+          <div className="apply-orb apply-orb-right" />
+
+          <div className="container py-5">
+            <div className="row align-items-center g-4">
+              <div className="col-lg-5">
+                <div className="apply-intro-card">
+                  <div className="hero-badge apply-badge mb-4">
+                    <span className="hero-badge-icon">
+                      <i className="fas fa-user-plus"></i>
+                    </span>
+                    <span>Become an instructor</span>
+                  </div>
+                  <h1 className="apply-title">Build and submit your learning module in a polished, guided flow.</h1>
+                  <p className="apply-description">
+                    Give your expertise a place on BrainLoop. Fill in the essentials, preview the progress, and submit a request for review when you’re ready.
+                  </p>
+
+                  <div className="apply-highlights">
+                    <div className="apply-highlight-item">
+                      <i className="fas fa-layer-group"></i>
+                      <span>Structured 7-step application</span>
+                    </div>
+                    <div className="apply-highlight-item">
+                      <i className="fas fa-shield-alt"></i>
+                      <span>Submitted for admin approval</span>
+                    </div>
+                    <div className="apply-highlight-item">
+                      <i className="fas fa-bolt"></i>
+                      <span>Fast, focused form experience</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="col-lg-7">
+                <div className="apply-form-shell">
+                  <div className="apply-form-topbar">
+                    <div>
+                      <div className="apply-eyebrow">Application progress</div>
+                      <h2 className="apply-form-title">{currentStepMeta.title}</h2>
+                      <p className="apply-form-subtitle">{currentStepMeta.subtitle}</p>
+                    </div>
+                    <div className="apply-progress-copy">Step {step} of {steps.length}</div>
+                  </div>
+
+                  <div className="apply-progress-track">
+                    <div className="apply-progress-bar" style={{ width: `${progressValue}%` }} />
+                  </div>
+
+                  {renderProgressDots()}
+
+                  <div className="apply-card-body">
+                    {isApproved === false ? (
+                      <div className="apply-state-card warning">
+                        <i className="fas fa-clock"></i>
+                        <h3>Your learning module is still under review.</h3>
+                        <p>{feedback || "Please wait for admin approval before submitting another request."}</p>
+                      </div>
+                    ) : isSubmitted ? (
+                      <div className="apply-state-card success">
+                        <i className="fas fa-circle-check"></i>
+                        <h3>Your module has been submitted for review.</h3>
+                        <p>We’ve received your request and will notify you once it has been approved.</p>
+                      </div>
+                    ) : (
+                      <form className="apply-form" onSubmit={handleSubmit}>
+                        {step === 1 && (
+                          <div className="stack-group">
+                            <label className="apply-label">Course title</label>
+                            <input
+                              type="text"
+                              name="title"
+                              className="form-control apply-input"
+                              placeholder="Enter a clear, specific title"
+                              required
+                              value={formData.title}
+                              onChange={handleChange}
+                            />
+                            <p className="apply-helper">Tip: use a title that reflects the outcome, not just the topic.</p>
+                          </div>
+                        )}
+
+                        {step === 2 && (
+                          <div className="stack-group">
+                            <label className="apply-label">Category</label>
+                            <select name="category" className="form-control apply-input" value={formData.category} onChange={handleChange} required>
+                              <option value="">Select Category</option>
+                              <option>Web Development</option>
+                              <option>Data Science</option>
+                              <option>Business</option>
+                              <option>Design</option>
+                              <option>Marketing</option>
+                              <option>Health & Fitness</option>
+                              <option>Photography</option>
+                              <option>Music</option>
+                            </select>
+                            <p className="apply-helper">Choose the category that best matches your course content.</p>
+                          </div>
+                        )}
+
+                        {step === 3 && (
+                          <div className="stack-group">
+                            <label className="apply-label">Intended learners</label>
+                            <p className="apply-helper">Describe who will benefit from this module.</p>
+                            {renderArrayFields("intendedLearners", "Learner")}
+                          </div>
+                        )}
+
+                        {step === 4 && (
+                          <div className="stack-group">
+                            <label className="apply-label">Learning objectives</label>
+                            <p className="apply-helper">Add clear outcomes students can expect to achieve.</p>
+                            {renderArrayFields("learningObjectives", "Objective")}
+                          </div>
+                        )}
+
+                        {step === 5 && (
+                          <div className="stack-group">
+                            <label className="apply-label">Prerequisites</label>
+                            <p className="apply-helper">List any knowledge, tools, or experience students need first.</p>
+                            {renderArrayFields("prerequisites", "Requirement")}
+                          </div>
+                        )}
+
+                        {step === 6 && (
+                          <div className="stack-group">
+                            <label className="apply-label">Weekly time commitment</label>
+                            <select name="timeCommitment" className="form-control apply-input" onChange={handleChange} required value={formData.timeCommitment}>
+                              <option value="">Select Time Commitment</option>
+                              <option>0-2 hours</option>
+                              <option>2-4 hours</option>
+                              <option>5+ hours</option>
+                              <option>Not sure yet</option>
+                            </select>
+                            <p className="apply-helper">This helps students decide if the module fits their schedule.</p>
+                          </div>
+                        )}
+
+                        {step === 7 && (
+                          <div className="apply-review-card">
+                            <h3>Review your submission</h3>
+                            <div className="apply-review-grid">
+                              <div>
+                                <span>Title</span>
+                                <strong>{formData.title || "Not set"}</strong>
+                              </div>
+                              <div>
+                                <span>Category</span>
+                                <strong>{formData.category || "Not set"}</strong>
+                              </div>
+                              <div>
+                                <span>Time commitment</span>
+                                <strong>{formData.timeCommitment || "Not set"}</strong>
+                              </div>
+                            </div>
+                            <p className="apply-helper mb-0">If everything looks right, submit your request for review.</p>
+                          </div>
+                        )}
+
+                        <div className="apply-actions">
+                          <button type="button" className="apply-secondary-btn" onClick={prevStep} disabled={step === 1}>
+                            Previous
+                          </button>
+
+                          {step < steps.length ? (
+                            <button type="button" className="apply-primary-btn" onClick={nextStep}>
+                              Continue
+                            </button>
+                          ) : (
+                            <button type="submit" className="apply-primary-btn" disabled={isSubmitting}>
+                              {isSubmitting ? "Submitting..." : "Submit for Review"}
+                            </button>
+                          )}
+                        </div>
+
+                        {submitError ? <div className="apply-error-text">{submitError}</div> : null}
+                      </form>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+      <BaseFooter />
+    </>
+  );
 };
+
 export default CourseCreationForm;

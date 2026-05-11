@@ -7,12 +7,40 @@ import moment from 'moment';
 import useAxios from '../../utils/useAxios';
 import UserData from '../plugin/UserData';
 import { Link } from 'react-router-dom';
+import Swal from 'sweetalert2';
 
 function Courses() {
     const [courses, setCourses] = useState([]);
     const api = useAxios();
     const user = UserData();
     const teacherId = user?.teacher_id;
+
+    const handleDeleteCourse = async (courseId) => {
+        if (!courseId) return;
+
+        const result = await Swal.fire({
+            title: 'Delete Course?',
+            text: 'This action cannot be undone.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Delete',
+            cancelButtonText: 'Cancel',
+        });
+
+        if (!result.isConfirmed) return;
+
+        try {
+            await api.delete(`/teacher/course-delete/${teacherId}/${courseId}/`);
+            Swal.fire('Deleted!', 'Course has been deleted successfully.', 'success');
+            const res = await api.get(`/teacher/course-lists/${teacherId}/`);
+            setCourses(res.data);
+        } catch (error) {
+            console.error("Failed to delete course", error);
+            Swal.fire('Error', 'Failed to delete course. Please try again.', 'error');
+        }
+    };
 
     useEffect(() => {
         const fetchCourses = async () => {
@@ -125,14 +153,14 @@ function Courses() {
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td><p className='mt-3'>{course.total_students || 0}</p></td>
+                                                    <td><p className='mt-3'>{course.total_students || course.students?.length || 0}</p></td>
                                                     <td><p className='mt-3 badge bg-success'>{course.level}</p></td>
-                                                    <td><p className='mt-3 badge bg-warning text-dark'>{course.status || "Pending"}</p></td>
-                                                    <td><p className='mt-3'>{moment(course.created_at).format("DD MMM, YYYY")}</p></td>
+                                                    <td><p className='mt-3 badge bg-warning text-dark'>{course.status || course.teacher_course_status || "Pending"}</p></td>
+                                                    <td><p className='mt-3'>{moment(course.created_at || course.date).format("DD MMM, YYYY")}</p></td>
                                                     <td>
-                                                        <Link to={`/instructor/edit-course/${course.course_id}/`} className='btn btn-primary btn-sm mt-3 me-1'><i className='fas fa-edit'></i></Link>
-                                                        <button className='btn btn-danger btn-sm mt-3 me-1'><i className='fas fa-trash'></i></button>
-                                                        <button className='btn btn-secondary btn-sm mt-3 me-1'><i className='fas fa-eye'></i></button>
+                                                        <Link to={course.course_id ? `/instructor/edit-course/${course.course_id}/` : '#'} className='btn btn-primary btn-sm mt-3 me-1'><i className='fas fa-edit'></i></Link>
+                                                        <button type="button" onClick={() => handleDeleteCourse(course.course_id)} className='btn btn-danger btn-sm mt-3 me-1'><i className='fas fa-trash'></i></button>
+                                                        <Link to={course.slug ? `/course-detail/${course.slug}/` : '#'} className='btn btn-secondary btn-sm mt-3 me-1'><i className='fas fa-eye'></i></Link>
                                                     </td>
                                                 </tr>
                                             )) : (

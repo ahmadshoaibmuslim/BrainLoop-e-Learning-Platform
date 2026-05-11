@@ -59,6 +59,13 @@ function Sidebar() {
                             </li>
 
                             <li className="nav-item">
+                                <Link className="nav-link " to={`/instructor/mentoring-sessions/`}>
+                                    {" "}
+                                    <i className="fas fa-chalkboard-teacher me-2"></i>Mentoring Sessions
+                                </Link>
+                            </li>
+
+                            <li className="nav-item">
                                 <Link className="nav-link " to={`/instructor/students/`}>
                                     {" "}
                                     <i className="fas fa-graduation-cap me-2"></i>Students

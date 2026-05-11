@@ -2,17 +2,16 @@ import React from 'react'
 
 function BaseFooter() {
   return (
-    <footer className="pt-lg-8 pt-5 footer bg-dark text-white mt-5" id="footer-section">
+    <footer className="pt-lg-8 pt-5 footer bg-black text-white mt-5" id="footer-section">
       <div className="container mt-lg-2">
         <div className="row">
           <div className="col-lg-4 col-md-6 col-12 text-white">
             {/* about company */}
             <div className="mb-4">
-              <h1>Skillz</h1>
+              <h1>BrainLoop</h1>
               <div className="mt-4">
                 <p>
-                   Skillz
-                   Discover world-class programs designed to help you gain the skills you need to thrive in a competitive world
+                  BrainLoop helps learners and instructors connect through premium online courses, resources, and community-led support.
                 </p>
                 {/* social media */}
                 <div className="fs-4 mt-4">
@@ -132,11 +131,11 @@ function BaseFooter() {
               <p></p>
               <p className="mb-1">
                 Email:
-                <a href="#" className='text-white'> support@Skillz.com</a>
+                <a href="#" className='text-white'> support@BrainLoop.com</a>
               </p>
               <p>
                 Phone:
-                <span className="text-dark fw-semibold"></span>
+                <a href="tel:+923147066766" className='text-white'>+92 3147066766</a>
               </p>
               <div className="d-flex">
                 <a href="#">
@@ -157,14 +156,12 @@ function BaseFooter() {
             </div>
           </div>
         </div>
-        <div className="row align-items-center g-0 border-top py-2 mt-6">
-          {/* Desc */}
+        <div className="row align-items-center g-0 border-top py-3 mt-6">
           <div className="col-md-10 col-12">
-            <div className="d-lg-flex align-items-center">
-              <div className="me-4">
+            <div className="d-lg-flex align-items-center justify-content-between">
+              <div>
                 <span>
-                  ©<span id="copyright5"></span>
-                  Skillz
+                  © {new Date().getFullYear()} BrainLoop
                 </span>
               </div>
               <div>
@@ -173,16 +170,15 @@ function BaseFooter() {
                     Privacy Policy
                   </a>
                   <a className="nav-link text-white px-2 px-md-3" href="#">
-                    {/* Cookie Notice */}
+                    Terms
                   </a>
                   <a className="nav-link text-white" href="#">
-                    {/* Terms of Use */}
+                    Support
                   </a>
                 </nav>
               </div>
             </div>
           </div>
-          {/* Links */}
           <div className="col-12 col-md-2 d-md-flex justify-content-end">
             <div className="dropdown">
               <a

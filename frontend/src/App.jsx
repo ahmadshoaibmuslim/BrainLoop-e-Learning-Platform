@@ -3,6 +3,7 @@ import MainWrapper from './layouts/MainWrapper';
 import { useState, useEffect, useContext } from 'react';
 // import { AuthProvider } from './context/AuthContext'; // Import AuthProvider
 import { AuthProvider } from './views/base/AuthContext';
+import Chatbot from './components/Chatbot/Chatbot';
 
 import Register from '../src/views/auth/Register';
 import Login from '../src/views/auth/Login';
@@ -28,6 +29,8 @@ import StudentProfile from "./views/student/Profile";
 import useAxios from "./utils/useAxios";
 import UserData from "./views/plugin/UserData";
 import StudentChangePassword from "./views/student/ChangePassword";
+import StudentQA from "./views/student/QA";
+import StudentQADetail from "./views/student/QADetail";
 import Dashboard from "./views/instructor/Dashboard";
 import Courses from "./views/instructor/Courses";
 import Review from "./views/instructor/Review";
@@ -41,30 +44,50 @@ import ChangePassword from "./views/instructor/ChangePassword";
 import Profile from "./views/instructor/Profile";
 import CourseCreate from "./views/instructor/CourseCreate";
 import CourseEdit from "./views/instructor/CourseEdit";
-import TeachOnSkillz from './views/base/TeachOnSkillz';
+import TeacherDashboard from './views/teacher/TeacherDashboard';
+import TeachOnBrainLoop from './views/base/TeachOnBrainLoop';
 import ApplyInstructor from './views/base/ApplyInstructor';
 import BookDetail from './views/base/bookDetail';
 
 import AddBook from './views/instructor/addBook';
 import BaseFooter from './views/partials/BaseFooter';
+import { useAuthStore } from './store/auth';
 
 // import AddBook from './views/instructor/addBook'
 
 function App() {
   const [cartCount, setCartCount] = useState(0);
   const [profile, setProfile] = useState([]);
+  const authUser = useAuthStore((state) => state.allUserData);
 
   useEffect(() => {
-    apiInstance.get(`course/cart-list/${CartId()}/`).then((res) => {
-      setCartCount(res.data?.length);
-    });
-    console.log(cartCount);
+    const userId = UserData()?.user_id;
+    if (userId) {
+      // Fetch profile
+      useAxios().get(`user/profile/${userId}/`)
+        .then((res) => {
+          setProfile(res.data);
+        })
+        .catch((err) => {
+          console.error("Error fetching profile:", err);
+          setProfile([]);
+        });
 
-    useAxios().get(`user/profile/${UserData()?.user_id}/`)
-      .then((res) => {
-        setProfile(res.data);
-      });
-  }, []);
+      // Fetch cart
+      apiInstance.get(`course/cart-list/${CartId()}/`)
+        .then((res) => {
+          setCartCount(res.data?.length || 0);
+        })
+        .catch((err) => {
+          console.error("Error fetching cart:", err);
+          setCartCount(0);
+        });
+    } else {
+      // Clear profile and cart when not logged in
+      setProfile([]);
+      setCartCount(0);
+    }
+  }, [authUser]);
 
   return (
     <AuthProvider> {/* Wrap your app with AuthProvider */}
@@ -84,7 +107,7 @@ function App() {
                 <Route path="/cart/" element={<Cart />} />
                 <Route path="/Checkout/:order_oid" element={<Checkout />} />
                 <Route path="/payment-success/:order_oid" element={<Success />} />
-                <Route path="/Search/" element={<Search />} />
+                <Route path="/search" element={<Search />} />
 
                 {/* Student route */}
                 <Route path="/student/dashboard/" element={<StudentDashboard />} />
@@ -99,6 +122,8 @@ function App() {
                 />
                 {/* Student mentoring sessions */}
                 <Route path="/student/mentoring-sessions" element={<MentoringSessions />} />
+                <Route path="/student/question-answer/" element={<StudentQA />} />
+                <Route path="/student/question-answer/:course_id/" element={<StudentQADetail />} />
                 <Route path="/books" element={<Books />} />
 
 
@@ -135,11 +160,14 @@ function App() {
         path="/instructor/edit-course/:course_id/"
         element={<CourseEdit />}
       />
+      <Route
+        path="/instructor/mentoring-sessions/"
+        element={<TeacherDashboard />}
+      />
 
 
       {/* new routs */}
-
-      <Route path="/teach-on-skillz/" element={<TeachOnSkillz />} />
+      <Route path="/teach-on-brainloop/" element={<TeachOnBrainLoop />} />
       <Route path="/apply-instructor/" element={<ApplyInstructor />} />
 
       <Route path="/books/books-detail/:id/" element={<BookDetail />} />
@@ -148,7 +176,7 @@ function App() {
       <Route path="/become-instructor/" element={<ApplyInstructor />} />
 
     </Routes>
-    
+      <Chatbot username="Noman" password="Noman@1212" />
         </MainWrapper >
       </BrowserRouter >
       </ProfileContext.Provider >

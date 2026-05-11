@@ -1,7 +1,8 @@
-import { useEffect, useState, useContext } from 'react';
+import { useEffect, useMemo, useState, useContext } from 'react';
 import BaseHeader from '../partials/BaseHeader';
 import BaseFooter from '../partials/BaseFooter';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import CartId from '../plugin/cartId';
 import GetCurrentAddress from '../plugin/UserCountry';
 import UserData from '../plugin/UserData';
@@ -9,18 +10,12 @@ import toast from '../plugin/toast';
 
 import Rater from 'react-rater'   //for rating in react
 import "react-rater/lib/react-rater.css"
+import '../styles/home.css'   //enhanced home page styles
 
 import apiInstance from '../../utils/useAxios';
 import { useAuthStore } from '../../store/auth';
-import useAxios from '../../utils/useAxios';
-import { userId } from '../../utils/constants';
 
 import { CartContext } from '../plugin/Context';
-import Books from './books';
-
-import nomanImage from '../../assets/images/noman.jpg';
-import teacherImage from '../../assets/images/th.jpeg';
-import sirImage from '../../assets/images/teacher.jpeg';
 
 import axios from 'axios';
 
@@ -30,12 +25,14 @@ function Index() {
     const [isLoading, setIsLoading] = useState(true)
     const [cartCount, setCartCount] = useContext(CartContext);
     const [books, setBooks] = useState([]);
+    const location = useLocation();
+    const queryParam = new URLSearchParams(location.search).get('query') || '';
 
     const country = GetCurrentAddress().country;
     // const userId = UserData()?.user_id; // user_id is not defined 
     const cartId = CartId();
-
-
+    const authUser = useAuthStore((state) => state.allUserData);
+    const currentUserId = authUser?.user_id || authUser?.id || UserData()?.user_id;
 
     const fetchBooks = async () => {
         setIsLoading(true);
@@ -84,98 +81,242 @@ function Index() {
             console.error("Error fetching cart:", error);
         }
     };
-    
 
-    const addToCart = async (courseId, userId, price, country, cartId) => {
-        if (!userId) {
+    useEffect(() => {
+        if (currentUserId) {
+            fetchCart(currentUserId);
+        }
+    }, [currentUserId]);
+
+    const searchQuery = queryParam.toLowerCase().trim();
+
+    const filteredCourses = useMemo(() => {
+        if (!searchQuery) {
+            return courses;
+        }
+
+        return courses.filter((course) => {
+            const title = course?.title || '';
+            const description = course?.description || '';
+            const tags = course?.tags || '';
+            const categoryTitle = course?.category?.title || course?.category || '';
+            const instructorName = course?.teacher?.full_name || course?.teacher?.teacher_name || '';
+
+            return [title, description, tags, categoryTitle, instructorName]
+                .join(' ')
+                .toLowerCase()
+                .includes(searchQuery);
+        });
+    }, [courses, searchQuery]);
+
+    const filteredBooks = useMemo(() => {
+        if (!searchQuery) {
+            return books;
+        }
+
+        return books.filter((book) => {
+            const title = book?.title || '';
+            const description = book?.description || '';
+            const category = book?.category?.title || book?.category || '';
+            const author = book?.author || '';
+
+            return [title, description, category, author]
+                .join(' ')
+                .toLowerCase()
+                .includes(searchQuery);
+        });
+    }, [books, searchQuery]);
+
+    const addToCart = async (courseId, price, country, cartId) => {
+        if (!currentUserId) {
             console.error("User ID is missing! Ensure user is logged in.");
+            toast().fire({
+                title: "Please login to add items",
+                icon: "warning",
+            });
             return;
         }
     
         const formdata = new FormData();
         formdata.append("course_id", courseId);
-        formdata.append("user_id", userId);
+        formdata.append("user_id", currentUserId);
         formdata.append("price", price);
         formdata.append("country_name", country);
         formdata.append("cart_id", cartId);
     
         try {
-            await useAxios().post(`course/cart/`, formdata).then((res) => {
-                console.log("Cart response:", res.data);
+            const res = await apiInstance().post(`course/cart/`, formdata);
+            console.log("Cart response:", res.data);
     
-                toast().fire({
-                    title: "Added To Cart",
-                    icon: "success",
-                });
-    
-                // Fetch the updated cart list after adding an item
-                fetchCart(userId); 
+            toast().fire({
+                title: "Added To Cart",
+                icon: "success",
             });
+    
+            fetchCart(currentUserId);
         } catch (error) {
             console.error("Error adding to cart:", error);
+            toast().fire({
+                title: "Unable to add to cart",
+                icon: "error",
+            });
         }
     };
     
 
-    //Pagination
-    const itemPerPage = 1
+    const formatPrice = (price) => {
+        const amount = Number(price);
+        if (!Number.isFinite(amount)) {
+            return "$0.00";
+        }
+        return `$${amount.toFixed(2)}`;
+    };
+
+    const itemPerPage = 8
     const [currentPage, setCurrentPage] = useState(1)
     const indexOfLastItem = currentPage * itemPerPage
-    const indexOFirstItem = indexOfLastItem - itemPerPage
-    const currentItems = courses.slice(indexOFirstItem, indexOfLastItem)
-    const totalPage = Math.ceil(courses.length / itemPerPage)
+    const indexOfFirstItem = indexOfLastItem - itemPerPage
+    const currentItems = filteredCourses.slice(indexOfFirstItem, indexOfLastItem)
+    const totalPage = Math.max(1, Math.ceil(filteredCourses.length / itemPerPage))
     const pageNumber = Array.from(
         { length: totalPage },
         (_, index) => index + 1
     )
 
+    const handlePageChange = (page) => {
+        if (page < 1 || page > totalPage) return;
+        setCurrentPage(page);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const showSearchResults = Boolean(searchQuery);
 
     return (
         <>
             <BaseHeader />
 
-            <section className="py-lg-8 py-5">
-                {/* container */}
-                <div className="container my-lg-8">
-                    {/* row */}
-                    <div className="row align-items-center">
-                        {/* col */}
-                        <div className="col-lg-6 mb-6 mb-lg-0">
-                            <div>
-                                {/* heading */}
-                                <h5 className="text-dark mb-4">
-                                    <i className="fe fe-check icon-xxs icon-shape bg-light-success text-success rounded-circle me-2" />
-                                    Most trusted education platform
-                                </h5>
-                                {/* heading */}
-                                <h1 className="display-3 fw-bold mb-3">
-                                    Your future is just a course away
-                                </h1>
-                                {/* para */}
-                                <p className="pe-lg-10 mb-5">
-                                    Discover world-class programs designed to help you gain the skills you need to thrive in a competitive world
-                                </p>
-                                {/* btn */}
-                                <a href="#" className="btn btn-primary fs-4 text-inherit ms-3">
-                                    Join Free Now <i className='fas fa-plus'></i>
-                                </a>
-                                <a
-                                    href=""
-                                    className="btn btn-outline-success fs-4 text-inherit ms-3"
-                                >
+            {showSearchResults && (
+                <section className="search-results-section py-4">
+                    <div className="container">
+                        <div className="section-header mb-4">
+                            <h2 className="section-title mb-2">
+                                Search Results for "{queryParam}"
+                            </h2>
+                            <p className="section-subtitle mb-0">
+                                Courses and books matching your search are shown below.
+                            </p>
+                        </div>
 
-                                    Watch Demo <i className='fas fa-video'></i>
+                        <div className="row g-4 mb-5">
+                            {filteredCourses.length > 0 ? (
+                                filteredCourses.map((c, index) => (
+                                    <div className="col-12 col-md-6 col-lg-3" key={`search-course-${c.id}-${index}`}>
+                                        <div className="course-card h-100">
+                                            <div className="course-image-wrapper">
+                                                <Link to={`/course-detail/${c.slug}/`}>
+                                                    <img
+                                                        src={c.image_url || c.image || 'https://via.placeholder.com/600x400?text=Course+Image'}
+                                                        alt={c.title}
+                                                    />
+                                                </Link>
+                                            </div>
+                                            <div className="course-card-body">
+                                                <h4 className="course-title mb-2">
+                                                    <Link to={`/course-detail/${c.slug}/`} className="text-inherit text-decoration-none">
+                                                        {c.title}
+                                                    </Link>
+                                                </h4>
+                                                <p className="course-students mb-0">
+                                                    <i className="fas fa-users me-2"></i>
+                                                    {c.students?.length || 0} student{c.students?.length !== 1 ? 's' : ''}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="col-12">
+                                    <p className="mb-0">No matching courses found.</p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="row g-4">
+                            {filteredBooks.length > 0 ? (
+                                filteredBooks.map((book) => (
+                                    <div className="col-12 col-md-6 col-lg-3" key={`search-book-${book.id}`}>
+                                        <div className="book-card h-100">
+                                            <div className="book-image-wrapper">
+                                                <Link to={`/books/books-detail/${book.id}/`}>
+                                                    <img
+                                                        src={book.image_url || book.image || 'https://via.placeholder.com/600x400?text=Book+Image'}
+                                                        alt={book.title}
+                                                        className="book-image"
+                                                        style={{ width: '100%', height: '220px', objectFit: 'cover' }}
+                                                    />
+                                                </Link>
+                                            </div>
+                                            <div className="book-body p-3">
+                                                <h4 className="book-title mb-2">
+                                                    <Link to={`/books/books-detail/${book.id}/`} className="text-decoration-none">
+                                                        {book.title}
+                                                    </Link>
+                                                </h4>
+                                                <p className="book-author mb-0">By: <strong>{book.author}</strong></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="col-12">
+                                    <p className="mb-0">No matching books found.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* Enhanced Hero Section */}
+            <section className="hero-section">
+                <div className="hero-decoration hero-decoration-1"></div>
+                <div className="hero-decoration hero-decoration-2"></div>
+                
+                <div className="container">
+                    <div className="row align-items-center">
+                        <div className="col-lg-6 hero-content">
+                            <div className="hero-badge">
+                                <span className="hero-badge-icon">
+                                    <i className="fas fa-check"></i>
+                                </span>
+                                <span>Trusted by 1M+ learners worldwide</span>
+                            </div>
+                            
+                            <h1 className="hero-title">
+                                Your future is just a course away
+                            </h1>
+                            
+                            <p className="hero-description">
+                                Discover world-class programs designed to help you gain the skills you need to thrive in a competitive world. Learn from industry experts and transform your career.
+                            </p>
+                            
+                            <div className="hero-buttons">
+                                <Link to="/search" className="btn-primary-gradient">
+                                    <i className="fas fa-play me-2"></i>Explore Courses
+                                </Link>
+                                <a href="#popular-courses" className="btn-outline-white">
+                                    <i className="fas fa-arrow-down me-2"></i>Browse Popular
                                 </a>
                             </div>
                         </div>
-                        {/* col */}
-                        <div className="col-lg-6 d-flex justify-content-center">
-                            {/* images */}
-                            <div className="position-relative">
-                                <img
-                                    src="https://th.bing.com/th?id=OIP.Bz32soE4ORfDlEHh0ZYnkgHaLr&w=199&h=313&c=8&rs=1&qlt=90&o=6&dpr=1.5&pid=3.1&rm=2"
-                                    alt="girl"
-                                    className="end-0 bottom-0"
+                        
+                        <div className="col-lg-6 d-none d-lg-flex justify-content-center hero-image">
+                            <div className="hero-player">
+                                <DotLottieReact
+                                    src="https://lottie.host/817816ea-11a9-4fb4-a037-37c24bd22aa3/9zKyrlijDk.lottie"
+                                    loop
+                                    autoplay
+                                    style={{ width: '100%', height: '100%' }}
                                 />
                             </div>
                         </div>
@@ -183,222 +324,197 @@ function Index() {
                 </div>
             </section>
 
-            <section className="pb-8">
-                <div className="container mb-lg-8">
-                    {/* row */}
-                    <div className="row mb-5">
-                        <div className="col-md-6 col-lg-3 border-top-md border-top pb-4  border-end-md">
-                            {/* text */}
-                            <div className="py-7 text-center">
-                                <div className="mb-3">
-                                    <i className="fe fe-award fs-2 text-info" />
-                                </div>
-                                <div className="lh-1">
-                                    <h2 className="mb-1">1000+</h2>
-                                    <span>Qualified Instructor</span>
-                                </div>
+            {/* Enhanced Stats Section */}
+            <section className="stats-section">
+                <div className="container">
+                    <div className="stats-grid">
+                        <div className="stat-card">
+                            <div className="stat-icon">
+                                <i className="fas fa-chalkboard-user"></i>
                             </div>
+                            <h3 className="stat-number">1000+</h3>
+                            <p className="stat-label">Expert Instructors</p>
                         </div>
-                        <div className="col-md-6 col-lg-3 border-top-md border-top border-end-lg">
-                            {/* icon */}
-                            <div className="py-7 text-center">
-                                <div className="mb-3">
-                                    <i className="fe fe-users fs-2 text-warning" />
-                                </div>
-                                {/* text */}
-                                <div className="lh-1">
-                                    <h2 className="mb-1">1000+</h2>
-                                    <span>Course enrolments</span>
-                                </div>
+                        
+                        <div className="stat-card">
+                            <div className="stat-icon">
+                                <i className="fas fa-users"></i>
                             </div>
+                            <h3 className="stat-number">1M+</h3>
+                            <p className="stat-label">Active Learners</p>
                         </div>
-                        <div className="col-md-6 col-lg-3 border-top-lg border-top border-end-md">
-                            {/* icon */}
-                            <div className="py-7 text-center">
-                                <div className="mb-3">
-                                    <i className="fe fe-tv fs-2 text-primary" />
-                                </div>
-                                {/* text */}
-                                <div className="lh-1">
-                                    <h2 className="mb-1">1200+</h2>
-                                    <span>Courses in 42 languages</span>
-                                </div>
+                        
+                        <div className="stat-card">
+                            <div className="stat-icon">
+                                <i className="fas fa-book"></i>
                             </div>
+                            <h3 className="stat-number">5000+</h3>
+                            <p className="stat-label">Courses Available</p>
                         </div>
-                        <div className="col-md-6 col-lg-3 border-top-lg border-top">
-                            {/* icon */}
-                            <div className="py-7 text-center">
-                                <div className="mb-3">
-                                    <i className="fe fe-film fs-2 text-success" />
-                                </div>
-                                {/* text */}
-                                <div className="lh-1">
-                                    <h2 className="mb-1">5000+</h2>
-                                    <span>Online Videos</span>
-                                </div>
+                        
+                        <div className="stat-card">
+                            <div className="stat-icon">
+                                <i className="fas fa-clock"></i>
                             </div>
+                            <h3 className="stat-number">50K+</h3>
+                            <p className="stat-label">Hours of Content</p>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <section className='mb-5'>
-                <div className="container mb-lg-8 ">
-                    <div className="row mb-5 mt-3">
-                        {/* col */}
-                        <div className="col-12">
-                            <div className="mb-6">
-                                <h2 className="mb-1 h1">🎓 Learn From the Best</h2>
-                                <p>
-                                    These top courses captured the attention of learners around the globe in 2024
-                                </p>
-                            </div>
-                        </div>
+            {/* Enhanced Courses Section */}
+            <section className="courses-section" id="popular-courses">
+                <div className="container">
+                    <div className="section-header">
+                            <h2 className="section-title">
+                                {searchQuery ? `Search Results for "${queryParam}"` : 'Learn From the Best'}
+                            </h2>
+                        <p className="section-subtitle">
+                            {searchQuery
+                                ? 'Matching courses from the catalog.'
+                                : 'Explore top-rated courses designed by industry experts and loved by learners worldwide.'}
+                        </p>
+                        <div className="section-title-underline"></div>
                     </div>
+                    
+                    <div className="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
+                        {currentItems?.map((c, index) => (
+                            <div className="col" key={`${c.id}-${index}`}>
+                                <div className="course-card">
+                                    <div className="course-image-wrapper">
+                                        <Link to={`/course-detail/${c.slug}/`}>
+                                            <img
+                                                src={c.image_url || c.image || 'https://via.placeholder.com/600x400?text=Course+Image'}
+                                                alt={c.title}
+                                            />
+                                        </Link>
 
-
-                    <div className="container mt-4">
-                        {/* Courses Section */}
-                        <h3 className="mb-4">Courses</h3>
-                        <div className="row">
-                            <div className="col-md-12">
-                                <div className="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
-                                    {courses?.map((c, index) => (
-                                        <div className="col" key={index}>
-                                            {/* Card */}
-                                            <div className="card card-hover uniform-card h-100">
-                                                <Link to={`/course-detail/${c.slug}/`}>
-                                                    <img
-                                                        src={c.image}
-                                                        alt="course"
-                                                        className="card-img-top"
-                                                        style={{
-                                                            width: "100%",
-                                                            height: "200px",
-                                                            objectFit: "cover",
-                                                        }}
-                                                    />
-                                                </Link>
-                                                {/* Card Body */}
-                                                <div className="card-body ">
-                                                    <div className="d-flex justify-content-between align-items-center mb-3">
-                                                        <div>
-                                                            <span className="badge bg-info">{c.level}</span>
-                                                            <span className="badge bg-success ms-2">{c.language}</span>
-                                                        </div>
-                                                        <a href="#" className="fs-5">
-                                                            <i className="fas fa-heart text-danger align-middle" />
-                                                        </a>
-                                                    </div>
-                                                    <h4 className="mb-2 text-truncate-line-2">
-                                                        <Link
-                                                            to={`/course-detail/${c.slug}/`}
-                                                            className="text-inherit text-decoration-none text-dark fs-5"
-                                                        >
-                                                            {c.title}
-                                                        </Link>
-                                                    </h4>
-                                                    <small>By: {c.teacher.full_name}</small> <br />
-                                                    <small>
-                                                        {c.students?.length} student
-                                                        {c.students?.length > 1 && "s"}
-                                                    </small>
-                                                    <br />
-                                                    <div className="lh-1 mt-3 d-flex">
-                                                        <span className="align-text-top">
-                                                            <span className="fs-6">
-                                                                <Rater total={5} rating={c.average_rating || 0} />
-                                                            </span>
-                                                        </span>
-                                                        <span className="text-warning">3</span>
-                                                        <span className="fs-6 ms-2">
-                                                            ({c.reviews?.length} Reviews)
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                {/* Card Footer */}
-                                                <div className="card-footer mt-auto">
-                                                    <div className="row align-items-center g-0">
-                                                        <div className="col">
-                                                            <h5 className="mb-0">${c.price}</h5>
-                                                        </div>
-                                                        <div className="col-auto">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    addToCart(
-                                                                        c.id,
-                                                                        userId,
-                                                                        c.price,
-                                                                        country,
-                                                                        cartId
-                                                                    )
-                                                                }
-                                                                className="text-inherit text-decoration-none btn btn-primary me-2"
-                                                            >
-                                                                <i className="fas fa-shopping-cart text-primary text-white" />
-                                                            </button>
-                                                          
-                                                            <Link
-                                                                to="/cart"
-                                                                className="text-inherit text-decoration-none btn btn-primary"
-                                                                onClick={() => {
-                                                                    addToCart(c.id, userId, c.price, country, cartId);
-                                                                }}
-                                                                >
-                                                                Enroll Now <i className="fas fa-arrow-right text-white ms-2" />
-                                                            </Link>
-
-
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                        <div className="course-badges">
+                                            <span className="badge badge-level">{c.level || 'All Levels'}</span>
+                                            {c.total_students > 100 && (
+                                                <span className="badge badge-bestseller">Popular</span>
+                                            )}
                                         </div>
-                                    ))}
+
+                                        <button
+                                            className="course-wishlist"
+                                            onClick={async (e) => {
+                                                e.preventDefault();
+                                                if (!currentUserId) {
+                                                    toast.error('Please login to add to wishlist');
+                                                    return;
+                                                }
+                                                try {
+                                                    const fd = new FormData();
+                                                    fd.append('user_id', currentUserId);
+                                                    fd.append('course_id', c.id);
+                                                    const res = await apiInstance().post(`student/wishlist/${currentUserId}/`, fd);
+                                                    console.log('Wishlist toggle:', res.data);
+                                                    toast.success(res.data.message || 'Wishlist updated');
+                                                } catch (err) {
+                                                    console.error('Wishlist error:', err?.response || err);
+                                                    const msg = err?.response?.data?.detail || err?.response?.data?.message || 'Failed to update wishlist';
+                                                    toast.error(msg);
+                                                }
+                                            }}
+                                        >
+                                            <i className="fas fa-heart"></i>
+                                        </button>
+                                    </div>
+
+                                    <div className="course-card-body">
+                                        <div className="course-instructor">
+                                            <div className="instructor-avatar">
+                                                {c.teacher?.full_name?.charAt(0)?.toUpperCase()}
+                                            </div>
+                                            <span className="instructor-name">{c.teacher?.full_name}</span>
+                                        </div>
+
+                                        <h4 className="course-title">
+                                            <Link to={`/course-detail/${c.slug}/`} className="text-inherit text-decoration-none">
+                                                {c.title}
+                                            </Link>
+                                        </h4>
+
+                                        <div className="course-rating">
+                                            <span className="rating-stars">
+                                                <Rater total={5} rating={c.average_rating || 0} interactive={false} />
+                                            </span>
+                                            <span className="rating-count">({c.reviews?.length || 0})</span>
+                                        </div>
+
+                                        <p className="course-students">
+                                            <i className="fas fa-users me-2"></i>
+                                            {c.students?.length || 0} student{c.students?.length !== 1 ? 's' : ''}
+                                        </p>
+                                    </div>
+
+                                    <div className="course-card-footer">
+                                        <div>
+                                            <div className="course-price">{formatPrice(c.price)}</div>
+                                            <small className="text-muted">{c.total_students} students enrolled</small>
+                                        </div>
+                                        <div className="course-actions">
+                                            <button
+                                                className="course-btn course-cart-btn"
+                                                onClick={() => addToCart(c.id, Number(c.price) || 0, country, cartId)}
+                                            >
+                                                Add to Cart
+                                            </button>
+                                            <Link to={`/course-detail/${c.slug}/`} className="course-btn course-view-btn">
+                                                View <i className="fas fa-arrow-right ms-2"></i>
+                                            </Link>
+                                        </div>
+                                    </div>
                                 </div>
-
-                                {/* Pagination */}
-                                <nav className="d-flex mt-5">
-                                    <ul className="pagination">
-                                        <li>
-                                            <button className="page-link me-1">
-                                                <i className="ci-arrow-left me-2" />
-                                                Previous
-                                            </button>
-                                        </li>
-                                    </ul>
-                                    <ul className="pagination">
-                                        <li key={1} className="active">
-                                            <button className="page-link">1</button>
-                                        </li>
-                                    </ul>
-                                    <ul className="pagination">
-                                        <li className={`totalPages`}>
-                                            <button className="page-link ms-1">
-                                                Next
-                                                <i className="ci-arrow-right ms-3" />
-                                            </button>
-                                        </li>
-                                    </ul>
-                                </nav>
                             </div>
-                        </div>
-
+                        ))}
                     </div>
 
+                                <nav className="pagination-wrapper mt-5" aria-label="Course pagination">
+                                    <button
+                                        className="page-nav-btn"
+                                        onClick={() => handlePageChange(currentPage - 1)}
+                                        disabled={currentPage === 1}
+                                    >
+                                        <i className="fas fa-chevron-left me-2" />
+                                        Previous
+                                    </button>
+
+                                    <div className="pagination-pages">
+                                        {pageNumber.map((page) => (
+                                            <button
+                                                key={page}
+                                                className={`page-number ${currentPage === page ? 'active' : ''}`}
+                                                onClick={() => handlePageChange(page)}
+                                            >
+                                                {page}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <button
+                                        className="page-nav-btn"
+                                        onClick={() => handlePageChange(currentPage + 1)}
+                                        disabled={currentPage === totalPage}
+                                    >
+                                        Next
+                                        <i className="fas fa-chevron-right ms-2" />
+                                    </button>
+                                </nav>
                 </div>
             </section>
 
-            {/* books  */}
-
-            <section className='mb-5'>
-            <div className="container mb-lg-8">
-            <div className="row mb-5 mt-3">
+            {/* Books Section */}
+            <section className='books-section'>
+            <div className="container">
+            <div className="books-header">
                 <div className="col-12">
-                    <div className="mb-6">
-                        <h2 className="mb-1 h1">📚 Explore Our Books</h2>
-                        <p>Discover the best books in various categories to expand your knowledge.</p>
+                    <div className="section-header text-center mb-5">
+                        <h2 className="section-title">📚 Explore Our Library</h2>
+                        <p className="section-subtitle">Discover curated books across diverse categories to expand your knowledge</p>
+                        <div className="section-title-underline mx-auto"></div>
                     </div>
                 </div>
             </div>
@@ -407,63 +523,50 @@ function Index() {
                 <div className="col-md-12">
                     <div className="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
                         {isLoading ? (
-                            <p>Loading books...</p>
+                            <p className="text-center">Loading books...</p>
                         ) : (
-                            books.map((book) => (
+                            filteredBooks.map((book) => (
                                 <div key={book.id} className="col">
-                                    <div className="card card-hover h-100">
-                                        <Link to={`/books/books-detail/${book.id}/`}>
-                                            <img
-                                                src={book.image} // Fetching Image from Backend
-                                                alt={book.title}
-                                                className="card-img-top"
-                                                style={{ width: "100%", height: "250px", objectFit: "cover" }}
-                                            />
-                                        </Link>
-
-                                        <div className="card-body">
-                                            <div className="d-flex justify-content-between align-items-center mb-3">
-                                                <div>
-                                                    <span className="badge bg-info">{book.category}</span>
-                                                    <span className="badge bg-success ms-2">{book.author}</span>
-                                                </div>
-                                                <a href="#" className="fs-5">
-                                                    <i className="fas fa-heart text-danger align-middle" />
-                                                </a>
-                                            </div>
-
-                                            <h4 className="mb-2 text-truncate-line-2">
-                                                <Link to={`/books/books-detail/${book.id}/`} className="text-inherit text-decoration-none text-dark fs-5">
-                                                    {book.title}
+                                    <div className="book-card h-100">
+                                        <div className="book-image-wrapper">
+                                            <Link to={`/books/books-detail/${book.id}/`}>
+                                                <img
+                                                    src={book.image}
+                                                    alt={book.title}
+                                                    className="book-image"
+                                                    style={{ width: "100%", height: "280px", objectFit: "cover" }}
+                                                />
+                                            </Link>
+                                            <div className="book-overlay">
+                                                <Link to={`/books/books-detail/${book.id}/`} className="book-view-btn">
+                                                    View Details
                                                 </Link>
-                                            </h4>
-                                            <small>By: {book.author}</small> <br />
-                                            <small>{book.reviews_count || 0} Reviews</small>
-                                            <br />
-
-                                            <div className="lh-1 mt-3 d-flex">
-                                                <span className="align-text-top">
-                                                    <span className="fs-6">
-                                                        <span className="text-warning">{book.rating || "N/A"}</span>
-                                                    </span>
-                                                </span>
-                                                <span className="fs-6 ms-2">{book.reviews_count || 0} Reviews</span>
                                             </div>
                                         </div>
 
-                                        <div className="card-footer">
-                                            <div className="row align-items-center g-0">
-                                                <div className="col">
-                                                    <h5 className="mb-0">${book.price}</h5>
-                                                </div>
-                                                <div className="col-auto">
-                                                    {/* <button type="button" className="text-inherit text-decoration-none btn btn-primary me-2">
-                                                        <i className="fas fa-shopping-cart text-primary text-white" />
-                                                    </button> */}
-                                                    <Link to={`/books/books-detail/${book.id}/`} className="text-inherit text-decoration-none btn btn-primary">
-                                                        View Details <i className="fas fa-arrow-right text-primary align-middle me-2 text-white" />
-                                                    </Link>
-                                                </div>
+                                        <div className="book-body">
+                                            <div className="book-meta mb-3">
+                                                <span className="book-badge category-badge">{book.category}</span>
+                                                <span className="book-badge author-badge">{book.author}</span>
+                                            </div>
+
+                                            <h4 className="book-title mb-2">
+                                                <Link to={`/books/books-detail/${book.id}/`} className="text-decoration-none">
+                                                    {book.title}
+                                                </Link>
+                                            </h4>
+                                            <p className="book-author mb-2">By: <strong>{book.author}</strong></p>
+                                            
+                                            <div className="book-rating mb-3">
+                                                <span className="rating-value">{book.rating || "N/A"}</span>
+                                                <span className="rating-count">({book.reviews_count || 0} reviews)</span>
+                                            </div>
+
+                                            <div className="book-footer">
+                                                <div className="book-price">${book.price}</div>
+                                                <a href="#" className="book-like-btn">
+                                                    <i className="fas fa-heart"></i>
+                                                </a>
                                             </div>
                                         </div>
                                     </div>
@@ -472,8 +575,10 @@ function Index() {
                         )}
                     </div>
 
-                    <div className="d-flex justify-content-center mt-4">
-                        <Link to="/books" className="btn btn-primary">See All Books</Link>
+                    <div className="d-flex justify-content-center mt-5">
+                        <Link to="/books" className="btn-see-all-books">
+                            See All Books <i className="fas fa-arrow-right ms-2"></i>
+                        </Link>
                     </div>
                 </div>
             </div>
@@ -484,344 +589,181 @@ function Index() {
 
 
 
-            <section className="my-8 py-lg-8">
-                {/* container */}
+            {/* Instructor CTA Section */}
+            <section className="instructor-cta-section">
                 <div className="container">
-                    {/* row */}
-                    <div className="row align-items-center bg-primary gx-0 rounded-3 mt-5">
-                        {/* col */}
-                        <div className="col-lg-6 col-12 d-none d-lg-block">
-                            <div className="d-flex justify-content-center pt-4">
-                                {/* img */}
-                                <div className="position-relative">
-                                    <img
-                                        src="https://geeksui.codescandy.com/geeks/assets/images/png/cta-instructor-1.png"
-                                        alt="image"
-                                        className="img-fluid mt-n8"
-                                    />
-                                    <div className="ms-n8 position-absolute bottom-0 start-0 mb-6">
-                                        <img src="https://geeksui.codescandy.com/geeks/assets/images/svg/dollor.svg" alt="dollor" />
-                                    </div>
-                                    {/* img */}
-                                    <div className="me-n4 position-absolute top-0 end-0">
-                                        <img src="https://geeksui.codescandy.com/geeks/assets/images/svg/graph.svg" alt="graph" />
-                                    </div>
+                    <div className="instructor-cta-wrapper">
+                        <div className="instructor-cta-content">
+                            <div className="cta-badge">
+                                <i className="fas fa-star me-2"></i>
+                                Join Our Teaching Community
+                            </div>
+                            <h2 className="instructor-cta-title">
+                                Share Your Knowledge & Inspire Millions
+                            </h2>
+                            <p className="instructor-cta-description">
+                                Become an instructor and teach millions of learners worldwide. We provide all the tools, resources, and support you need to create amazing courses and build a thriving teaching career.
+                            </p>
+                            <div className="instructor-benefits">
+                                <div className="benefit-item">
+                                    <i className="fas fa-check-circle"></i>
+                                    <span>Unlimited Earning Potential</span>
+                                </div>
+                                <div className="benefit-item">
+                                    <i className="fas fa-check-circle"></i>
+                                    <span>Complete Creative Control</span>
+                                </div>
+                                <div className="benefit-item">
+                                    <i className="fas fa-check-circle"></i>
+                                    <span>24/7 Support & Resources</span>
                                 </div>
                             </div>
+                            <Link to="/apply-instructor/" className="btn-instructor-cta">
+                                Start Teaching Today <i className="fas fa-arrow-right ms-2"></i>
+                            </Link>
                         </div>
-                        <div className="col-lg-5 col-12">
-                            <div className="text-white p-5 p-lg-0">
-                                {/* text */}
-                                <h2 className="h1 text-white">Become an instructor today</h2>
-                                <p className="mb-0">
-                                    Instructors from around the world teach millions of students on
-                                    Geeks. We provide the tools and skills to teach what you love.
-                                </p>
-
-                                <Link to="/apply-instructor/" className="btn bg-white text-dark fw-bold mt-4">
-                                Start Teaching Today <i className="fas fa-arrow-right"></i> 
-                                </Link>
-                           
+                        <div className="instructor-cta-visual">
+                            <div className="cta-animation-box">
+                                <div className="floating-card card-1">
+                                    <i className="fas fa-video"></i>
+                                    <span>Create Courses</span>
+                                </div>
+                                <div className="floating-card card-2">
+                                    <i className="fas fa-users"></i>
+                                    <span>Reach Students</span>
+                                </div>
+                                <div className="floating-card card-3">
+                                    <i className="fas fa-coins"></i>
+                                    <span>Earn Money</span>
+                                </div>
+                                <div className="cta-glow-element"></div>
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <section className="bg-gray-200 pt-8 pb-8 mt-5">
-                <div className="container pb-8">
-                    {/* row */}
-                    <div className="row mb-lg-8 mb-5">
-                        <div className="offset-lg-1 col-lg-10 col-12">
-                            <div className="row align-items-center">
-                                {/* col */}
-                                <div className="col-lg-6 col-md-8">
-                                    {/* rating */}
-                                    <div>
-                                        <div className="mb-3">
-                                            <span className="lh-1">
-                                                <span className="align-text-top ms-2">
-                                                    <i className='fas fa-star text-warning'></i>
-                                                    <i className='fas fa-star text-warning'></i>
-                                                    <i className='fas fa-star text-warning'></i>
-                                                    <i className='fas fa-star text-warning'></i>
-                                                    <i className='fas fa-star text-warning'></i>
-                                                </span>
-                                                <span className="text-dark fw-semibold">4.5/5.0</span>
-                                            </span>
-                                            <span className="ms-2">(Based on 3265 ratings)</span>
-                                        </div>
-                                        {/* heading */}
-                                        <h2 className="h1">What our students say</h2>
-                                        <p className="mb-0">
-                                            Hear from
-                                            <span className="text-dark">teachers</span>,
-                                            <span className="text-dark">trainers</span>, and
-                                            <span className="text-dark">leaders</span>
-                                            in the learning space about how Geeks empowers them to provide
-                                            quality online learning experiences.
-                                        </p>
-                                    </div>
+            {/* Features Section */}
+            <section className="features-section">
+                <div className="container">
+                    <div className="section-header text-center mb-5">
+                        <h2 className="section-title">Why Choose Our Platform</h2>
+                        <p className="section-subtitle">
+                            Discover the powerful features that make learning enjoyable and effective
+                        </p>
+                        <div className="section-title-underline mx-auto"></div>
+                    </div>
+
+                    <div className="row g-4">
+                        {/* Feature 1 */}
+                        <div className="col-lg-3 col-md-6">
+                            <div className="feature-card">
+                                <div className="feature-icon bg-gradient-1">
+                                    <i className="fas fa-video"></i>
                                 </div>
-                                <div className="col-lg-6 col-md-4 text-md-end mt-4 mt-md-0">
-                                    {/* btn */}
-                                    <a href="#" className="btn btn-primary">
-                                        View Reviews
-                                    </a>
-                                </div>
+                                <h4 className="feature-title">HD Video Courses</h4>
+                                <p className="feature-description">
+                                    Learn from high-quality HD videos with professional instructors from around the world.
+                                </p>
+                                <a href="#" className="feature-link">Learn more <i className="fas fa-arrow-right ms-2"></i></a>
                             </div>
                         </div>
-                    </div>
-                    {/* row */}
-                    <div className="row">
-                        {/* col */}
-                        <div className="col-md-12">
-                            <div className="position-relative">
-                                {/* controls */}
-                                {/* slider */}
-                                <div className="sliderTestimonial">
-                                    {/* item */}
-                                    <div className="row">
-                                        <div className="col-lg-4">
-                                            <div className="item">
-                                                <div className="card">
-                                                    <div className="card-body text-center p-6">
-                                                        {/* img */}
-                                                        <img
-                                                            src={nomanImage}
-                                                            alt="avatar"
-                                                            className="avatar avatar-lg rounded-circle"
-                                                            style={{ width: '200px', height: '200px', objectFit: 'cover' }}
-                                                        />
-                                                        <p className="mb-0 mt-3">
-                                                            “The generated lorem Ipsum is therefore always free from
-                                                            repetition, injected humour, or words etc generate lorem
-                                                            Ipsum which looks racteristic reasonable.”
-                                                        </p>
-                                                        {/* rating */}
-                                                        <div className="lh-1 mb-3 mt-4">
-                                                            <span className="fs-6 align-top">
-                                                                <svg
-                                                                    xmlns="http://www.w3.org/2000/svg"
-                                                                    width={11}
-                                                                    height={11}
-                                                                    fill="currentColor"
-                                                                    className="bi bi-star-fill text-warning"
-                                                                    viewBox="0 0 16 16"
-                                                                >
-                                                                    <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z" />
-                                                                </svg>
-                                                                <svg
-                                                                    xmlns="http://www.w3.org/2000/svg"
-                                                                    width={11}
-                                                                    height={11}
-                                                                    fill="currentColor"
-                                                                    className="bi bi-star-fill text-warning"
-                                                                    viewBox="0 0 16 16"
-                                                                >
-                                                                    <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z" />
-                                                                </svg>
-                                                                <svg
-                                                                    xmlns="http://www.w3.org/2000/svg"
-                                                                    width={11}
-                                                                    height={11}
-                                                                    fill="currentColor"
-                                                                    className="bi bi-star-fill text-warning"
-                                                                    viewBox="0 0 16 16"
-                                                                >
-                                                                    <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z" />
-                                                                </svg>
-                                                                <svg
-                                                                    xmlns="http://www.w3.org/2000/svg"
-                                                                    width={11}
-                                                                    height={11}
-                                                                    fill="currentColor"
-                                                                    className="bi bi-star-fill text-warning"
-                                                                    viewBox="0 0 16 16"
-                                                                >
-                                                                    <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z" />
-                                                                </svg>
-                                                                <svg
-                                                                    xmlns="http://www.w3.org/2000/svg"
-                                                                    width={11}
-                                                                    height={11}
-                                                                    fill="currentColor"
-                                                                    className="bi bi-star-fill text-warning"
-                                                                    viewBox="0 0 16 16"
-                                                                >
-                                                                    <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z" />
-                                                                </svg>
-                                                            </span>
-                                                            <span className="text-warning">5</span>
-                                                            {/* text */}
-                                                        </div>
-                                                        <h3 className="mb-0 h4">Noman Wahdat</h3>
-                                                        <span>Software Engineer at UET</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="col-lg-4">
-                                            <div className="item">
-                                                <div className="card">
-                                                    <div className="card-body text-center p-6">
-                                                        {/* img */}
-                                                        <img
-                                                            src={teacherImage}
-                                                            alt="avatar"
-                                                            className="avatar avatar-lg rounded-circle"
-                                                            style={{ width: '200px', height: '200px', objectFit: 'cover' }}
-                                                        />
-                                                        <p className="mb-0 mt-3">
-                                                            “The generated lorem Ipsum is therefore always free from
-                                                            repetition, injected humour, or words etc generate lorem
-                                                            Ipsum which looks racteristic reasonable.”
-                                                        </p>
-                                                        {/* rating */}
-                                                        <div className="lh-1 mb-3 mt-4">
-                                                            <span className="fs-6 align-top">
-                                                                <svg
-                                                                    xmlns="http://www.w3.org/2000/svg"
-                                                                    width={11}
-                                                                    height={11}
-                                                                    fill="currentColor"
-                                                                    className="bi bi-star-fill text-warning"
-                                                                    viewBox="0 0 16 16"
-                                                                >
-                                                                    <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z" />
-                                                                </svg>
-                                                                <svg
-                                                                    xmlns="http://www.w3.org/2000/svg"
-                                                                    width={11}
-                                                                    height={11}
-                                                                    fill="currentColor"
-                                                                    className="bi bi-star-fill text-warning"
-                                                                    viewBox="0 0 16 16"
-                                                                >
-                                                                    <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z" />
-                                                                </svg>
-                                                                <svg
-                                                                    xmlns="http://www.w3.org/2000/svg"
-                                                                    width={11}
-                                                                    height={11}
-                                                                    fill="currentColor"
-                                                                    className="bi bi-star-fill text-warning"
-                                                                    viewBox="0 0 16 16"
-                                                                >
-                                                                    <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z" />
-                                                                </svg>
-                                                                <svg
-                                                                    xmlns="http://www.w3.org/2000/svg"
-                                                                    width={11}
-                                                                    height={11}
-                                                                    fill="currentColor"
-                                                                    className="bi bi-star-fill text-warning"
-                                                                    viewBox="0 0 16 16"
-                                                                >
-                                                                    <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z" />
-                                                                </svg>
-                                                                <svg
-                                                                    xmlns="http://www.w3.org/2000/svg"
-                                                                    width={11}
-                                                                    height={11}
-                                                                    fill="currentColor"
-                                                                    className="bi bi-star-fill text-warning"
-                                                                    viewBox="0 0 16 16"
-                                                                >
-                                                                    <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z" />
-                                                                </svg>
-                                                            </span>
-                                                            <span className="text-warning">5</span>
-                                                            {/* text */}
-                                                        </div>
-                                                        <h3 className="mb-0 h4">Dr. Laeeq</h3>
-                                                        <span>Software Engineer at UET</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="col-lg-4">
-                                            <div className="item">
-                                                <div className="card">
-                                                    <div className="card-body text-center p-6">
-                                                        {/* img */}
-                                                        <img
-                                                            src={sirImage}
-                                                            alt="avatar"
-                                                            className="avatar avatar-lg rounded-circle"
-                                                            style={{ width: '200px', height: '200px', objectFit: 'cover' }}
-                                                        />
 
-                                                        <p className="mb-0 mt-3">
-                                                            “The generated lorem Ipsum is therefore always free from
-                                                            repetition, injected humour, or words etc generate lorem
-                                                            Ipsum which looks racteristic reasonable.”
-                                                        </p>
-                                                        {/* rating */}
-                                                        <div className="lh-1 mb-3 mt-4">
-                                                            <span className="fs-6 align-top">
-                                                                <svg
-                                                                    xmlns="http://www.w3.org/2000/svg"
-                                                                    width={11}
-                                                                    height={11}
-                                                                    fill="currentColor"
-                                                                    className="bi bi-star-fill text-warning"
-                                                                    viewBox="0 0 16 16"
-                                                                >
-                                                                    <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z" />
-                                                                </svg>
-                                                                <svg
-                                                                    xmlns="http://www.w3.org/2000/svg"
-                                                                    width={11}
-                                                                    height={11}
-                                                                    fill="currentColor"
-                                                                    className="bi bi-star-fill text-warning"
-                                                                    viewBox="0 0 16 16"
-                                                                >
-                                                                    <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z" />
-                                                                </svg>
-                                                                <svg
-                                                                    xmlns="http://www.w3.org/2000/svg"
-                                                                    width={11}
-                                                                    height={11}
-                                                                    fill="currentColor"
-                                                                    className="bi bi-star-fill text-warning"
-                                                                    viewBox="0 0 16 16"
-                                                                >
-                                                                    <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z" />
-                                                                </svg>
-                                                                <svg
-                                                                    xmlns="http://www.w3.org/2000/svg"
-                                                                    width={11}
-                                                                    height={11}
-                                                                    fill="currentColor"
-                                                                    className="bi bi-star-fill text-warning"
-                                                                    viewBox="0 0 16 16"
-                                                                >
-                                                                    <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z" />
-                                                                </svg>
-                                                                <svg
-                                                                    xmlns="http://www.w3.org/2000/svg"
-                                                                    width={11}
-                                                                    height={11}
-                                                                    fill="currentColor"
-                                                                    className="bi bi-star-fill text-warning"
-                                                                    viewBox="0 0 16 16"
-                                                                >
-                                                                    <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z" />
-                                                                </svg>
-                                                            </span>
-                                                            <span className="text-warning">5</span>
-                                                            {/* text */}
-                                                        </div>
-                                                        <h3 className="mb-0 h4">Mr. Nazeef</h3>
-                                                        <span>Software Engineer </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                        {/* Feature 2 */}
+                        <div className="col-lg-3 col-md-6">
+                            <div className="feature-card">
+                                <div className="feature-icon bg-gradient-2">
+                                    <i className="fas fa-certificate"></i>
                                 </div>
+                                <h4 className="feature-title">Certificates</h4>
+                                <p className="feature-description">
+                                    Earn recognized certificates upon course completion and showcase your achievements.
+                                </p>
+                                <a href="#" className="feature-link">Learn more <i className="fas fa-arrow-right ms-2"></i></a>
+                            </div>
+                        </div>
+
+                        {/* Feature 3 */}
+                        <div className="col-lg-3 col-md-6">
+                            <div className="feature-card">
+                                <div className="feature-icon bg-gradient-3">
+                                    <i className="fas fa-users"></i>
+                                </div>
+                                <h4 className="feature-title">Community Support</h4>
+                                <p className="feature-description">
+                                    Join a vibrant community of learners, ask questions, and get help from peers.
+                                </p>
+                                <a href="#" className="feature-link">Learn more <i className="fas fa-arrow-right ms-2"></i></a>
+                            </div>
+                        </div>
+
+                        {/* Feature 4 */}
+                        <div className="col-lg-3 col-md-6">
+                            <div className="feature-card">
+                                <div className="feature-icon bg-gradient-4">
+                                    <i className="fas fa-mobile-alt"></i>
+                                </div>
+                                <h4 className="feature-title">Mobile Learning</h4>
+                                <p className="feature-description">
+                                    Access courses on-the-go with our mobile app for seamless learning experience.
+                                </p>
+                                <a href="#" className="feature-link">Learn more <i className="fas fa-arrow-right ms-2"></i></a>
+                            </div>
+                        </div>
+
+                        {/* Feature 5 */}
+                        <div className="col-lg-3 col-md-6">
+                            <div className="feature-card">
+                                <div className="feature-icon bg-gradient-5">
+                                    <i className="fas fa-clock"></i>
+                                </div>
+                                <h4 className="feature-title">Learn at Your Pace</h4>
+                                <p className="feature-description">
+                                    Study whenever and wherever you want with lifetime access to course materials.
+                                </p>
+                                <a href="#" className="feature-link">Learn more <i className="fas fa-arrow-right ms-2"></i></a>
+                            </div>
+                        </div>
+
+                        {/* Feature 6 */}
+                        <div className="col-lg-3 col-md-6">
+                            <div className="feature-card">
+                                <div className="feature-icon bg-gradient-6">
+                                    <i className="fas fa-book"></i>
+                                </div>
+                                <h4 className="feature-title">Rich Resources</h4>
+                                <p className="feature-description">
+                                    Access comprehensive materials including books, notes, and downloadable resources.
+                                </p>
+                                <a href="#" className="feature-link">Learn more <i className="fas fa-arrow-right ms-2"></i></a>
+                            </div>
+                        </div>
+
+                        {/* Feature 7 */}
+                        <div className="col-lg-3 col-md-6">
+                            <div className="feature-card">
+                                <div className="feature-icon bg-gradient-7">
+                                    <i className="fas fa-chart-line"></i>
+                                </div>
+                                <h4 className="feature-title">Track Progress</h4>
+                                <p className="feature-description">
+                                    Monitor your learning journey with detailed analytics and performance insights.
+                                </p>
+                                <a href="#" className="feature-link">Learn more <i className="fas fa-arrow-right ms-2"></i></a>
+                            </div>
+                        </div>
+
+                        {/* Feature 8 */}
+                        <div className="col-lg-3 col-md-6">
+                            <div className="feature-card">
+                                <div className="feature-icon bg-gradient-8">
+                                    <i className="fas fa-star"></i>
+                                </div>
+                                <h4 className="feature-title">Expert Instructors</h4>
+                                <p className="feature-description">
+                                    Learn from industry experts with years of experience in their respective fields.
+                                </p>
+                                <a href="#" className="feature-link">Learn more <i className="fas fa-arrow-right ms-2"></i></a>
                             </div>
                         </div>
                     </div>

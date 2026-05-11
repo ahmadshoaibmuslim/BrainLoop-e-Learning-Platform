@@ -1,0 +1,135 @@
+<mxfile host="app.diagrams.net" modified="2024-01-01T00:00:00.000Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" etag="abc123" version="24.1.0" type="device">
+  <diagram id="diagram1" name="BrainLoop Architecture">
+    <mxGraphModel dx="1000" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- User Interface Layer -->
+        <mxCell id="ui_layer" value="User Interface Layer" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;" parent="1" vertex="1">
+          <mxGeometry x="40" y="40" width="320" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="react" value="React + Vite Frontend" style="text;strokeColor=none;fillColor=#e1f5fe;fontSize=12;" parent="ui_layer" vertex="1">
+          <mxGeometry x="0" y="30" width="320" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="admin" value="Admin Dashboard (Django Jazzmin)" style="text;strokeColor=none;fillColor=#e1f5fe;fontSize=12;" parent="ui_layer" vertex="1">
+          <mxGeometry x="0" y="60" width="320" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="chat" value="AI Chat Widget" style="text;strokeColor=none;fillColor=#e1f5fe;fontSize=12;" parent="ui_layer" vertex="1">
+          <mxGeometry x="0" y="90" width="320" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- API Gateway Layer -->
+        <mxCell id="api_layer" value="API Gateway Layer" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;" parent="1" vertex="1">
+          <mxGeometry x="40" y="200" width="320" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="rest_api" value="Django REST API (100+ Endpoints)" style="text;strokeColor=none;fillColor=#fff3e0;fontSize=12;" parent="api_layer" vertex="1">
+          <mxGeometry x="0" y="30" width="320" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="jwt" value="JWT Authentication" style="text;strokeColor=none;fillColor=#fff3e0;fontSize=12;" parent="api_layer" vertex="1">
+          <mxGeometry x="0" y="60" width="320" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="cors" value="CORS Handling" style="text;strokeColor=none;fillColor=#fff3e0;fontSize=12;" parent="api_layer" vertex="1">
+          <mxGeometry x="0" y="90" width="320" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- Application Logic Layer -->
+        <mxCell id="logic_layer" value="Application Logic Layer" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;" parent="1" vertex="1">
+          <mxGeometry x="40" y="360" width="320" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="course_mgmt" value="Course Management Service" style="text;strokeColor=none;fillColor=#f3e5f5;fontSize=12;" parent="logic_layer" vertex="1">
+          <mxGeometry x="0" y="30" width="320" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="auth_svc" value="User Authentication Service" style="text;strokeColor=none;fillColor=#f3e5f5;fontSize=12;" parent="logic_layer" vertex="1">
+          <mxGeometry x="0" y="55" width="320" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="payment_svc" value="Payment Processing (Stripe &amp; PayPal)" style="text;strokeColor=none;fillColor=#f3e5f5;fontSize=12;" parent="logic_layer" vertex="1">
+          <mxGeometry x="0" y="80" width="320" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="mentoring_svc" value="Mentoring Sessions (Zoom Integration)" style="text;strokeColor=none;fillColor=#f3e5f5;fontSize=12;" parent="logic_layer" vertex="1">
+          <mxGeometry x="0" y="105" width="320" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="ml_svc" value="ML Recommendations (scikit-learn)" style="text;strokeColor=none;fillColor=#f3e5f5;fontSize=12;" parent="logic_layer" vertex="1">
+          <mxGeometry x="0" y="130" width="320" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="ai_svc" value="AI Chat Services (Intent Detection)" style="text;strokeColor=none;fillColor=#f3e5f5;fontSize=12;" parent="logic_layer" vertex="1">
+          <mxGeometry x="0" y="155" width="320" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- Data Persistence Layer -->
+        <mxCell id="data_layer" value="Data Persistence Layer" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;" parent="1" vertex="1">
+          <mxGeometry x="40" y="580" width="320" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="database" value="SQLite/PostgreSQL (15+ Tables)" style="text;strokeColor=none;fillColor=#e8f5e8;fontSize=12;" parent="data_layer" vertex="1">
+          <mxGeometry x="0" y="30" width="320" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="storage" value="Media Storage (AWS S3)" style="text;strokeColor=none;fillColor=#e8f5e8;fontSize=12;" parent="data_layer" vertex="1">
+          <mxGeometry x="0" y="60" width="320" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- External Integrations -->
+        <mxCell id="external_layer" value="External Integrations" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;" parent="1" vertex="1">
+          <mxGeometry x="40" y="710" width="320" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="openai" value="OpenAI API (GPT-4o-mini)" style="text;strokeColor=none;fillColor=#ffebee;fontSize=12;" parent="external_layer" vertex="1">
+          <mxGeometry x="0" y="30" width="320" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="groq" value="Groq API (Fast Inference)" style="text;strokeColor=none;fillColor=#ffebee;fontSize=12;" parent="external_layer" vertex="1">
+          <mxGeometry x="0" y="50" width="320" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="ollama" value="Ollama (Local AI)" style="text;strokeColor=none;fillColor=#ffebee;fontSize=12;" parent="external_layer" vertex="1">
+          <mxGeometry x="0" y="70" width="320" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="gemini" value="Google Gemini API" style="text;strokeColor=none;fillColor=#ffebee;fontSize=12;" parent="external_layer" vertex="1">
+          <mxGeometry x="0" y="90" width="320" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="stripe" value="Stripe &amp; PayPal Payment Gateway" style="text;strokeColor=none;fillColor=#ffebee;fontSize=12;" parent="external_layer" vertex="1">
+          <mxGeometry x="0" y="110" width="320" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="zoom" value="Zoom Video API" style="text;strokeColor=none;fillColor=#ffebee;fontSize=12;" parent="external_layer" vertex="1">
+          <mxGeometry x="0" y="130" width="320" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- Connection Arrows -->
+        <mxCell id="arrow1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="react" target="rest_api" edge="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="arrow2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="admin" target="rest_api" edge="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="arrow3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="chat" target="rest_api" edge="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="arrow4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="rest_api" target="course_mgmt" edge="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="arrow5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="course_mgmt" target="database" edge="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="arrow6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="payment_svc" target="stripe" edge="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="arrow7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="mentoring_svc" target="zoom" edge="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="arrow8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="ai_svc" target="openai" edge="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="arrow9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="ai_svc" target="groq" edge="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="arrow10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="ai_svc" target="ollama" edge="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="arrow11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="ai_svc" target="gemini" edge="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Title -->
+        <mxCell id="title" value="BrainLoop: AI-Powered Multi-Vendor E-Learning Platform Architecture" style="text;fontSize=16;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="40" y="10" width="600" height="30" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

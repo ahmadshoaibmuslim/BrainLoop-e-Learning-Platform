@@ -1,8 +1,13 @@
 from django.conf import settings
 from api import views as api_views
 from django.urls import path
+from rest_framework import routers
 # from .views import RegisterView, VerifyEmailView, ResendVerificationView
 from .views import LearningModuleCreateView, LearningModuleApprovalView, check_approval_status
+
+router = routers.DefaultRouter()
+router.register(r'mentoring-sessions', api_views.MentoringSessionViewSet, basename='mentoring-sessions')
+router.register(r'users', api_views.UserViewSet, basename='users')
 
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -50,17 +55,12 @@ urlpatterns = [
     path("student/rate-course/", api_views.StudentRateCourseCreateAPIView.as_view()),
     path("student/review-detail/<user_id>/<review_id>/", api_views.StudentRateCourseUpdateAPIView.as_view()),
     path("student/wishlist/<user_id>/", api_views.StudentWishListListCreateAPIView.as_view()),
+    path("student/wishlist-delete/<int:wishlist_id>/", api_views.StudentWishListDeleteAPIView.as_view()),
     path("student/question-answer-list-create/<course_id>/", api_views.QuestionAnswerListCreateAPIView.as_view()),
+    path("student/question-answer-list/<user_id>/", api_views.StudentQuestionAnswerListAPIView.as_view()),
     path("student/question-answer-message-create/", api_views.QuestionAnswerMessageSendAPIView.as_view()),
 
     # one to one mentoring
-    path('mentoring-sessions/', api_views.MentoringSessionListView.as_view(), name='mentoring-session-list-create'),
-
-    path('mentoring-sessions/<int:pk>/', api_views.MentoringSessionDetailAPIView.as_view(), name='mentoring-session-detail'),
-    path('mentoring-sessions/upcoming/', api_views.UpcomingSessionsAPIView.as_view(), name='upcoming-sessions'),
-    path('mentoring-sessions/past/', api_views.PastSessionsAPIView.as_view(), name='past-sessions'),
-
-
     # Teacher Routes
     path("teachers/", api_views.TeacherListView.as_view()),
 
@@ -80,6 +80,7 @@ urlpatterns = [
     path("teacher/noti-detail/<teacher_id>/<noti_id>", api_views.TeacherNotificationDetailAPIView.as_view()),
     path("teacher/course-create/", api_views.CourseCreateAPIView.as_view()),
     path("teacher/course-update/<teacher_id>/<course_id>/", api_views.CourseUpdateAPIView.as_view()),
+    path("teacher/course-delete/<teacher_id>/<course_id>/", api_views.CourseDeleteAPIView.as_view()),
     path("teacher/course-detail/<course_id>/", api_views.CourseDetailAPIView.as_view()),
     path("teacher/course/variant-delete/<variant_id>/<teacher_id>/<course_id>/", api_views.CourseVariantDeleteAPIView.as_view()),
     path("teacher/course/variant-item-delete/<variant_id>/<variant_item_id>/<teacher_id>/<course_id>/", api_views.CourseVariantItemDeleteAPIVIew.as_view()),
@@ -107,3 +108,5 @@ urlpatterns = [
 
 
 ]
+
+urlpatterns += router.urls

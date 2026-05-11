@@ -1,4 +1,6 @@
 from django.shortcuts import render, redirect
+from django.contrib.auth import get_user_model
+from django.http import Http404
 from rest_framework.views import APIView
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
@@ -10,6 +12,13 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from .models import MentoringSession
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import permissions
+
+try:
+    from .zoom_utils import create_zoom_meeting
+except ImportError:
+    create_zoom_meeting = None
+
+User = get_user_model()
 
 from django.core.mail import send_mail
 
@@ -26,7 +35,7 @@ from rest_framework import generics, status, viewsets
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, action
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from .models import LearningModule
 from .serializer import LearningModuleSerializer, LearningModuleAdminSerializer
@@ -197,14 +206,18 @@ class CourseDetailAPIView(generics.RetrieveAPIView):
     def get_object(self):
         # This view is called from two URLs:
         # 1. course/course-detail/<slug>/ (public)
-        # 2. teacher/course-detail/<course_id>/ (teacher)
+        # 2. teacher/course-detail/<course_id>/ (teacher - course_id is ShortUUID)
         slug = self.kwargs.get('slug')
         course_id = self.kwargs.get('course_id')
         
         if slug:
             course = api_models.Course.objects.get(slug=slug, platform_status="Published", teacher_course_status="Published")
         elif course_id:
-            course = api_models.Course.objects.get(id=course_id)
+            # Try to find by ShortUUID field (course_id) first, then fallback to id
+            try:
+                course = api_models.Course.objects.get(course_id=course_id)
+            except api_models.Course.DoesNotExist:
+                course = api_models.Course.objects.get(id=course_id)
         else:
             raise ValueError("Either slug or course_id must be provided")
         
@@ -850,19 +863,55 @@ class StudentWishListListCreateAPIView(generics.ListCreateAPIView):
         return api_models.WishList.objects.filter(user=user)
     
     def create(self, request, *args, **kwargs):
-        user_id = request.data['user_id']
-        course_id = request.data['course_id']
+        # Support multiple possible input keys from frontend
+        course_id = request.data.get('course_id') or request.data.get('course') or request.data.get('Course')
 
-        user = User.objects.get(id=user_id)
-        course = api_models.Course.objects.get(id=course_id)
+        # Prefer authenticated user when available
+        if request.user and getattr(request.user, 'is_authenticated', False):
+            user = request.user
+        else:
+            user_id = request.data.get('user_id') or request.data.get('user')
+            if not user_id:
+                return Response({"detail": "user_id missing"}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        wishlist = api_models.WishList.objects.filter(user=user, course=course).first()  
+        if not course_id:
+            return Response({"detail": "course_id missing"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            course = api_models.Course.objects.get(id=course_id)
+        except api_models.Course.DoesNotExist:
+            return Response({"detail": "Course not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Note: model field name is `Course` (capital C) in models.py
+        wishlist = api_models.WishList.objects.filter(user=user, Course=course).first()
         if wishlist:
             wishlist.delete()
             return Response({"message": "Wishlist Deleted"}, status=status.HTTP_200_OK)
         else:
-            api_models.WishList.objects.create(user=user, course=course)  # Correct model name `WishList`
+            # use the correct field name `Course` when creating
+            api_models.WishList.objects.create(user=user, Course=course)
             return Response({"message": "Wishlist Created"}, status=status.HTTP_201_CREATED)
+
+
+class StudentWishListDeleteAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, wishlist_id, *args, **kwargs):
+        try:
+            wishlist_item = api_models.WishList.objects.get(id=wishlist_id)
+        except api_models.WishList.DoesNotExist:
+            return Response({"detail": "Wishlist item not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Only owner or staff can delete
+        if wishlist_item.user and wishlist_item.user != request.user and not request.user.is_staff:
+            return Response({"detail": "Not permitted to delete this wishlist item"}, status=status.HTTP_403_FORBIDDEN)
+
+        wishlist_item.delete()
+        return Response({"message": "Wishlist Deleted"}, status=status.HTTP_200_OK)
 
 
 class StudentCourseDetailAPIView(generics.RetrieveAPIView):
@@ -937,6 +986,45 @@ class QuestionAnswerMessageSendAPIView(generics.CreateAPIView):
         question_serializer = api_serializer.Question_AnswerSerializer(question)
         return Response({"messgae": "Message Sent", "question": question_serializer.data})
 
+
+class StudentQuestionAnswerListAPIView(generics.ListAPIView):
+    serializer_class = api_serializer.Question_AnswerSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        user_id = self.kwargs['user_id']
+        user = User.objects.get(id=user_id)
+        # Get all questions asked by this user
+        return api_models.Question_Answer.objects.filter(user=user)
+    
+    def list(self, request, *args, **kwargs):
+        user_id = self.kwargs['user_id']
+        user = User.objects.get(id=user_id)
+        
+        # Get all questions by user grouped by course
+        questions = api_models.Question_Answer.objects.filter(user=user)
+        
+        # Group questions by course
+        course_questions = {}
+        for question in questions:
+            course = question.course
+            if course.id not in course_questions:
+                course_questions[course.id] = {
+                    "course_id": course.id,
+                    "course_title": course.title,
+                    "course_image": request.build_absolute_uri(course.image.url) if course.image else None,
+                    "questions": []
+                }
+            course_questions[course.id]["questions"].append({
+                "qa_id": question.qa_id,
+                "title": question.title,
+                "date": question.date,
+                "messages_count": question.messages().count()
+            })
+        
+        return Response(list(course_questions.values()), status=status.HTTP_200_OK)
+
+
 class TeacherListView(generics.ListAPIView):
     queryset = api_models.Teacher.objects.all()   # ✅ Only show approved instructors
     serializer_class = api_serializer.TeacherSerializer
@@ -954,8 +1042,13 @@ class TeacherSummaryAPIView(generics.ListAPIView):
         one_month_ago = datetime.today() - timedelta(days=28)
 
         total_courses = api_models.Course.objects.filter(teacher=teacher).count()
-        total_revenue = api_models.CartOrderItem.objects.filter(teacher=teacher, order__payment_status="Paid").aggregate(total_revenue=models.Sum("total"))['total_revenue'] or 0
-        monthly_revenue = api_models.CartOrderItem.objects.filter(teacher=teacher, order__payment_status="Paid", date__gte=one_month_ago).aggregate(total_revenue=models.Sum("total"))['total_revenue'] or 0
+        total_revenue = api_models.CartOrderItem.objects.filter(teacher=teacher).aggregate(total_revenue=models.Sum("total"))['total_revenue'] or 0
+        monthly_revenue = api_models.CartOrderItem.objects.filter(teacher=teacher, date__gte=one_month_ago).aggregate(total_revenue=models.Sum("total"))['total_revenue'] or 0
+
+        if not total_revenue:
+            total_revenue = api_models.EnrolledCourse.objects.filter(teacher=teacher).aggregate(total_revenue=models.Sum(models.F('course__price')))['total_revenue'] or 0
+            monthly_fallback = api_models.EnrolledCourse.objects.filter(teacher=teacher, date__gte=one_month_ago).aggregate(total_revenue=models.Sum(models.F('course__price')))['total_revenue'] or 0
+            monthly_revenue = monthly_revenue or monthly_fallback
 
         enrolled_courses = api_models.EnrolledCourse.objects.filter(teacher=teacher)
         unique_student_ids = set()
@@ -1226,9 +1319,9 @@ class CourseCreateAPIView(generics.CreateAPIView):
 
 
 class CourseUpdateAPIView(generics.RetrieveUpdateAPIView):
-    querysect = api_models.Course.objects.all()
+    queryset = api_models.Course.objects.all()
     serializer_class = api_serializer.CourseSerializer
-    permisscion_classes = [AllowAny]
+    permission_classes = [AllowAny]
 
     def get_object(self):
         teacher_id = self.kwargs['teacher_id']
@@ -1238,10 +1331,10 @@ class CourseUpdateAPIView(generics.RetrieveUpdateAPIView):
         course = api_models.Course.objects.get(course_id=course_id)
 
         return course
-    
+
     def update(self, request, *args, **kwargs):
         course = self.get_object()
-        serializer = self.get_serializer(course, data=request.data)
+        serializer = self.get_serializer(course, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
 
         if "image" in request.data and isinstance(request.data['image'], InMemoryUploadedFile):
@@ -1252,7 +1345,7 @@ class CourseUpdateAPIView(generics.RetrieveUpdateAPIView):
         if 'file' in request.data and not str(request.data['file']).startswith("http://"):
             course.file = request.data['file']
 
-        if 'category' in request.data['category'] and request.data['category'] != 'NaN' and request.data['category'] != "undefined":
+        if 'category' in request.data and request.data['category'] and request.data['category'] != 'NaN' and request.data['category'] != "undefined":
             category = api_models.Category.objects.get(id=request.data['category'])
             course.category = category
 
@@ -1356,6 +1449,30 @@ class CourseUpdateAPIView(generics.RetrieveUpdateAPIView):
                             preview=preview,
                         )
 
+
+class CourseDeleteAPIView(generics.DestroyAPIView):
+    queryset = api_models.Course.objects.all()
+    permission_classes = [AllowAny]
+
+    def get_object(self):
+        teacher_id = self.kwargs['teacher_id']
+        course_id = self.kwargs['course_id']
+
+        teacher = api_models.Teacher.objects.get(id=teacher_id)
+        course = api_models.Course.objects.get(course_id=course_id, teacher=teacher)
+
+        return course
+
+
+class TeacherNotificationListAPIView(generics.ListAPIView):
+    serializer_class = api_serializer.NotificationSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        teacher_id = self.kwargs['teacher_id']
+        teacher = api_models.Teacher.objects.get(id=teacher_id)
+        return api_models.Notification.objects.filter(teacher=teacher, seen=False)
+
     def save_nested_data(self, course_instance, serializer_class, data):
         serializer = serializer_class(data=data, many=True, context={"course_instance": course_instance})
         serializer.is_valid(raise_exception=True)
@@ -1413,53 +1530,91 @@ logger = logging.getLogger(__name__)
     
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
-class MentoringSessionListView(generics.ListCreateAPIView):
+class MentoringSessionViewSet(viewsets.ModelViewSet):
+    queryset = MentoringSession.objects.all()
     serializer_class = api_serializer.MentoringSessionSerializer
-    permission_classes = [AllowAny]  # Ensure user is authenticated
-    
+    permission_classes = [IsAuthenticated]
+
     def get_queryset(self):
-        student_id = self.request.query_params.get('student')
+        user = self.request.user
+        teacher_id = self.request.query_params.get('teacher_id')
+        student_id = self.request.query_params.get('student_id')
+
+        if teacher_id:
+            try:
+                return MentoringSession.objects.filter(teacher_id=int(teacher_id))
+            except (ValueError, TypeError):
+                return MentoringSession.objects.none()
 
         if student_id:
             try:
                 return MentoringSession.objects.filter(student_id=int(student_id))
             except (ValueError, TypeError):
-                return MentoringSession.objects.none()  # Avoid fallback on user
+                return MentoringSession.objects.none()
 
-        # If no student ID is provided, just return all sessions publicly
-        return MentoringSession.objects.all()
-    
-    
+        return MentoringSession.objects.filter(models.Q(teacher=user) | models.Q(student=user))
 
-class MentoringSessionDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = MentoringSession.objects.all()
-    serializer_class = api_serializer.MentoringSessionSerializer
-    permission_classes = [AllowAny]
+    def perform_create(self, serializer):
+        serializer.save(student=self.request.user, status=MentoringSession.STATUS_PENDING)
 
-class UpcomingSessionsAPIView(generics.ListAPIView):
-    serializer_class = api_serializer.MentoringSessionSerializer
-    permission_classes = [AllowAny]
+    @action(detail=True, methods=['patch'], permission_classes=[IsAuthenticated])
+    def accept(self, request, pk=None):
+        session = self.get_object()
+        if session.teacher != request.user:
+            return Response({'detail': 'Only the assigned teacher can accept this session.'}, status=status.HTTP_403_FORBIDDEN)
+        if session.status != MentoringSession.STATUS_PENDING:
+            return Response({'detail': 'Only pending sessions can be accepted.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    def get_queryset(self):
-        student_id = self.request.query_params.get('student')
-        if student_id:
-            return MentoringSession.objects.filter(student_id=student_id, status='upcoming')
-        return MentoringSession.objects.none()
+        zoom_data = {}
+        if create_zoom_meeting is not None:
+            try:
+                zoom_data = create_zoom_meeting(
+                    topic=session.topic,
+                    start_time=session.start_time,
+                    duration=session.duration,
+                    host_email=session.teacher.email,
+                ) or {}
+            except Exception as exc:
+                logger.exception('Zoom meeting creation failed: %s', exc)
+                return Response(
+                    {
+                        'detail': 'Zoom meeting could not be created. Please check Zoom settings and try again.',
+                    },
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
 
-class PastSessionsAPIView(generics.ListAPIView):
-    serializer_class = api_serializer.MentoringSessionSerializer
-    permission_classes = [AllowAny]
+        session.status = MentoringSession.STATUS_ACCEPTED
+        session.join_url = zoom_data.get('join_url') or session.join_url
+        session.zoom_meeting_id = zoom_data.get('id') or session.zoom_meeting_id
+        session.save()
+        serializer = self.get_serializer(session)
+        return Response(serializer.data)
 
-    def get_queryset(self):
+    @action(detail=True, methods=['patch'], permission_classes=[IsAuthenticated])
+    def reject(self, request, pk=None):
+        session = self.get_object()
+        if session.teacher != request.user:
+            return Response({'detail': 'Only the assigned teacher can reject this session.'}, status=status.HTTP_403_FORBIDDEN)
+        if session.status != MentoringSession.STATUS_PENDING:
+            return Response({'detail': 'Only pending sessions can be rejected.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        student_id = self.request.query_params.get('student')
-        if student_id:
-            return MentoringSession.objects.filter(student_id=student_id, status='completed')
-        return MentoringSession.objects.none()
+        session.status = MentoringSession.STATUS_REJECTED
+        session.save()
+        serializer = self.get_serializer(session)
+        return Response(serializer.data)
 
-        user = self.request.user
-        return MentoringSession.objects.filter(student=user, status='completed')
-    
+    def destroy(self, request, *args, **kwargs):
+        session = self.get_object()
+        if session.teacher != request.user and session.student != request.user:
+            return Response({'detail': 'Not authorized to cancel this session.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().destroy(request, *args, **kwargs)
+
+
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = api_serializer.UserSerializer
+    permission_classes = [IsAuthenticated]
+
 
 # Teacher application 
 class LearningModuleCreateView(generics.CreateAPIView):
@@ -1630,29 +1785,37 @@ from django.shortcuts import get_object_or_404
 from io import BytesIO
 from .models import Book
 
+from django.views.decorators.http import condition
+from django.views.decorators.clickjacking import xframe_options_exempt
+
+@xframe_options_exempt
 def preview_book(request, book_id):
     book = get_object_or_404(Book, id=book_id)
 
     if not book.pdf_file:
         return HttpResponse("No PDF available", status=404)
 
-    # Open the book PDF
-    pdf_reader = PyPDF2.PdfReader(book.pdf_file)
-    preview_pages = min(book.preview_pages, len(pdf_reader.pages))  # Limit preview pages
+    try:
+        # Open the book PDF
+        pdf_reader = PyPDF2.PdfReader(book.pdf_file)
+        preview_pages = min(book.preview_pages, len(pdf_reader.pages))  # Limit preview pages
 
-    output_pdf = PyPDF2.PdfWriter()
-    
-    # Add only the allowed preview pages
-    for i in range(preview_pages):
-        output_pdf.add_page(pdf_reader.pages[i])
+        output_pdf = PyPDF2.PdfWriter()
+        
+        # Add only the allowed preview pages
+        for i in range(preview_pages):
+            output_pdf.add_page(pdf_reader.pages[i])
 
-    # Save to memory
-    output_stream = BytesIO()
-    output_pdf.write(output_stream)
-    output_stream.seek(0)
+        # Save to memory
+        output_stream = BytesIO()
+        output_pdf.write(output_stream)
+        output_stream.seek(0)
 
-    # Return as a response
-    return FileResponse(output_stream, content_type='application/pdf')
+        # Create response with proper headers
+        response = HttpResponse(output_stream.getvalue(), content_type='application/pdf')
+        return response
+    except Exception as e:
+        return HttpResponse(f"Error processing PDF: {str(e)}", status=500)
 
 
 

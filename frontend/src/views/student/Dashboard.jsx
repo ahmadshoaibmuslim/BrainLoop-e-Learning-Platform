@@ -15,7 +15,11 @@ import { login } from '../../utils/auth'
 function Dashboard() {
 
     const [courses, setCourses] = useState([]);
-    const [stats, setStats] = useState([]);
+    const [stats, setStats] = useState({
+        total_courses: 0,
+        completed_lessons: 0,
+        achieved_certificates: 0
+    });
     const [fetching, setFetching] = useState(true);
    
     

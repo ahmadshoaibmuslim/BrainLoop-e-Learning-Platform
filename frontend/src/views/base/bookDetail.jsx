@@ -294,12 +294,12 @@
                             </div>
                             </div>
                             <div>
-                            {previewUrl && (
+                            {(previewUrl || book.pdf_file) && (
                                 <button
                                 className="btn btn-info mb-3 w-100"
                                 onClick={() => setShowPreview(true)}
                                 >
-                                <i className="fas fa-book-open"></i> Preview Book
+                                <i className="fas fa-book-open"></i> Preview Book ({book.preview_pages} pages)
                                 </button>
                             )}
                             <Modal
@@ -308,17 +308,46 @@
                                 size="lg"
                             >
                                 <Modal.Header closeButton>
-                                <Modal.Title>Book Preview</Modal.Title>
+                                <Modal.Title>Book Preview - {book.preview_pages} pages free preview</Modal.Title>
                                 </Modal.Header>
-                                <Modal.Body>
-                                <iframe
-                                    src={previewUrl}
-                                    width="100%"
-                                    height="500px"
-                                    style={{ border: "none" }}
-                                ></iframe>
+                                <Modal.Body style={{ minHeight: "400px" }}>
+                                <div className="text-center">
+                                    {book && book.pdf_file ? (
+                                        <div>
+                                            <p className="mb-4">Preview of first {book.preview_pages} pages</p>
+                                            <p className="text-muted mb-3">
+                                                <i className="fas fa-file-pdf text-danger"></i> PDF File
+                                            </p>
+                                        </div>
+                                    ) : previewUrl ? (
+                                        <div>
+                                            <p className="mb-4">External preview available</p>
+                                        </div>
+                                    ) : (
+                                        <p>No preview available for this book.</p>
+                                    )}
+                                </div>
                                 </Modal.Body>
                                 <Modal.Footer>
+                                {book && book.pdf_file && (
+                                    <>
+                                        <a
+                                            href={`http://127.0.0.1:8000/api/v1/books/${book.id}/preview/`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="btn btn-success"
+                                        >
+                                            <i className="fas fa-external-link-alt"></i> Open in New Tab
+                                        </a>
+                                        <a
+                                            href={`http://127.0.0.1:8000/api/v1/books/${book.id}/preview/`}
+                                            download
+                                            className="btn btn-primary"
+                                        >
+                                            <i className="fas fa-download"></i> Download Preview
+                                        </a>
+                                    </>
+                                )}
                                 <Button
                                     variant="secondary"
                                     onClick={() => setShowPreview(false)}
@@ -402,9 +431,16 @@
                             <li className="list-group-item d-flex justify-content-between align-items-center">
                             <span className="h6 fw-light mb-0">
                                 <i className="fas fa-fw fa-book-open text-primary me-2" />
-                                Pages
+                                Total Pages
                             </span>
-                            <span>{book.pages}</span>
+                            <span>{book.total_pages}</span>
+                            </li>
+                            <li className="list-group-item d-flex justify-content-between align-items-center">
+                            <span className="h6 fw-light mb-0">
+                                <i className="fas fa-fw fa-eye text-primary me-2" />
+                                Free Preview
+                            </span>
+                            <span>{book.preview_pages} pages</span>
                             </li>
                             <li className="list-group-item d-flex justify-content-between align-items-center">
                             <span className="h6 fw-light mb-0">

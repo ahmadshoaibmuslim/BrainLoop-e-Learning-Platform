@@ -1,428 +1,640 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
-import { Modal, Button, Form } from "react-bootstrap";
-import BaseHeader from "../partials/BaseHeader";
-import BaseFooter from "../partials/BaseFooter";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-import Cookies from "js-cookie";
+import React, { useState, useEffect } from 'react';
+import Cookies from 'js-cookie';
+import toast from '../plugin/toast';
+import apiInstance from '../../utils/axios';
+import BaseHeader from '../partials/BaseHeader';
+import BaseFooter from '../partials/BaseFooter';
+import '../styles/studentDashboard.css';
 
 
-function MentoringSessions() {
-    const [sessions, setSessions] = useState([]);
-    const [mentors, setMentors] = useState([]);
-    const [filteredSessions, setFilteredSessions] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [filterStatus, setFilterStatus] = useState("all");
-    const [showBookingModal, setShowBookingModal] = useState(false);
-    const [formData, setFormData] = useState({
-        mentorId: "",
-        date: new Date(),
-        time: new Date(),
-        goals: "",
-        title: "",
-    });
+const MentoringSessions = () => {
+  // Form States
+  const [formData, setFormData] = useState({
+    teacher: '',
+    topic: '',
+    date_time: '',
+    duration: '30',
+  });
 
-    useEffect(() => {
-        const fetchMentors = async () => {
-            try {
-                const response = await axios.get(
-                    "http://127.0.0.1:8000/api/v1/teachers/"
-                );
-                console.log("Mentors Data:", response.data);
-                setMentors(response.data);
-            } catch (error) {
-                console.error("Error fetching mentors:", error);
-            }
-        };
+  // Data States
+  const [teachers, setTeachers] = useState([]);
+  const [upcomingSessions, setUpcomingSessions] = useState([]);
+  const [pastSessions, setPastSessions] = useState([]);
 
-        const fetchSessions = async () => {
-            try {
-                const token = Cookies.get("access_token");
-                if (!token) throw new Error("No authentication token found");
-        
-                const userId = localStorage.getItem("userId"); // Get user ID
-                if (!userId) throw new Error("User ID not found");
-        
-                const response = await axios.get(
-                    "http://127.0.0.1:8000/api/v1/mentoring-sessions/",
-                    {
-                        params: { student: userId }, // Ensure filtering by logged-in user
-                        headers: {
-                            Authorization: `Token ${token}`,
-                            "Content-Type": "application/json",
-                        },
-                    }
-                );
-        
-                console.log("Fetched Sessions:", response.data);
-                setSessions(response.data);
-                setLoading(false);
-            } catch (error) {
-                console.error("Error fetching sessions:", error);
-                setLoading(false);
-            }
-        };
+  const getSessionEnd = (session) => {
+    if (!session?.start_time || !session?.duration) return null;
+    const start = new Date(session.start_time);
+    if (Number.isNaN(start.getTime())) return null;
+    return new Date(start.getTime() + session.duration * 60000);
+  };
 
-        
-        const handleBooking = async () => {
-            try {
-                const token = Cookies.get("access_token"); // Use Cookies consistently
-                if (!token) {
-                    alert("Please login again");
-                    return;
-                }
-        
-                const userId = localStorage.getItem("userId"); // Get the logged-in user ID
-                if (!userId) {
-                    alert("User ID not found, please log in again.");
-                    return;
-                }
-        
-                // Convert mentorId and studentId to integers
-                const mentorId = parseInt(formData.mentorId, 10);
-                const studentId = parseInt(userId, 10);
-        
-                if (isNaN(mentorId) || isNaN(studentId)) {
-                    alert("Invalid mentor or student ID.");
-                    return;
-                }
-        
-                // Prepare request data
-                const requestData = {
-                    title: formData.title,
-                    mentor: mentorId,
-                    student: studentId,
-                    date: formData.date.toISOString().split("T")[0], // Format date as YYYY-MM-DD
-                    time: formData.time.toTimeString().split(" ")[0], // Format time as HH:MM:SS
-                    goals: formData.goals || "",
-                    status: "upcoming",
-                };
-        
-                console.log("Booking Request Data:", requestData); // Debugging
-        
-                // API request
-                const response = await axios.post(
-                    "http://127.0.0.1:8000/api/v1/mentoring-sessions/",
-                    requestData,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                            "Content-Type": "application/json",
-                        },
-                    }
-                );
-        
-                Swal.fire({
-                    icon: "success",
-                    title: "Session booked successfully!",
-                    showConfirmButton: false,
-                    timer: 1500,
-                });
-        
-                setShowBookingModal(false);
-                fetchSessions(); // Refresh session list
-            } catch (error) {
-                console.error("Error booking session:", error.response?.data || error);
-        
-                if (error.response?.status === 401 || error.response?.status === 403) {
-                    try {
-                        const newTokens = await getRefreshedToken();
-                        if (newTokens) {
-                            setAuthUser(newTokens.access, newTokens.refresh);
-                            return handleBooking(); // Retry booking
-                        }
-                    } catch (refreshError) {
-                        logout();
-                        Swal.fire({
-                            icon: "error",
-                            title: "Session expired",
-                            text: "Please login again",
-                        });
-                    }
-                } else {
-                    Swal.fire({
-                        icon: "error",
-                        title: "Booking failed",
-                        text: error.response?.data?.message || "Please check your input",
-                    });
-                }
-            }
-        };
-        
+  // UI States
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState('upcoming'); // request, upcoming, history
 
-        fetchMentors();
-        fetchSessions();
-    }, []);
-
-    useEffect(() => {
-        if (!loading) {
-            const filtered = sessions.filter((session) => {
-                const matchesSearch =
-                    session.title.toLowerCase().includes(searchQuery) ||
-                    session.mentor?.full_name.toLowerCase().includes(searchQuery);
-                const matchesFilter =
-                    filterStatus === "all" || session.status === filterStatus;
-                return matchesSearch && matchesFilter;
-            });
-            setFilteredSessions(filtered);
-        }
-    }, [sessions, searchQuery, filterStatus, loading]);
-    
-    const handleBooking = async () => {
-    const token = localStorage.getItem("token");
+  // Fetch Data on Component Mount
+  useEffect(() => {
+    const token = Cookies.get('access_token');
     if (!token) {
-        console.error("No authentication token found. Please log in again.");
-        return;
+      toast.error('Please log in first');
+      return;
     }
 
-    // Debugging: Log the formData object
-    console.log("Form Data:", formData);
+    fetchTeachers();
+    fetchSessions();
+  }, []);
 
-    // Check if mentorId is defined
-    if (!formData.mentorId) {
-        alert("Please select a mentor.");
-        return;
+  // Fetch Teachers List
+  const fetchTeachers = async () => {
+    try {
+      const response = await apiInstance.get('teachers/');
+      if (response.data && Array.isArray(response.data)) {
+        const teachersList = response.data.map((teacher) => ({
+          id: teacher.id || teacher.user?.id,
+          full_name: teacher.teacher_name || teacher.full_name || teacher.user?.full_name || teacher.user?.username || 'Unknown Teacher',
+          user: teacher.user,
+        }));
+        setTeachers(teachersList);
+      } else {
+        setTeachers([]);
+      }
+    } catch (error) {
+      console.error('Error fetching teachers:', error);
+      toast.error('Failed to load teachers');
+      setTeachers([]);
     }
+  };
 
-    // Check if session title is defined
-    if (!formData.title) {
-        alert("Please enter a session title.");
-        return;
+  // Fetch Mentoring Sessions
+  const fetchSessions = async () => {
+    try {
+      setLoading(true);
+      const response = await apiInstance.get('mentoring-sessions/');
+      
+      if (response.data && Array.isArray(response.data)) {
+        const now = new Date();
+
+        const upcoming = response.data.filter((session) => {
+          const status = session?.status?.toLowerCase();
+          const start = session.start_time ? new Date(session.start_time) : null;
+          const end = getSessionEnd(session);
+          if (!start || Number.isNaN(start.getTime())) return false;
+          if (status === 'rejected') return false;
+          if (status === 'accepted') {
+            return end ? end > now : start > now;
+          }
+          return true;
+        });
+
+        const past = response.data.filter((session) => {
+          const status = session?.status?.toLowerCase();
+          const end = getSessionEnd(session);
+          return status === 'rejected' || (status === 'accepted' && end && end <= now);
+        });
+
+        setUpcomingSessions(upcoming);
+        setPastSessions(past);
+      } else {
+        setUpcomingSessions([]);
+        setPastSessions([]);
+      }
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
+      toast.error('Failed to load sessions');
+      setUpcomingSessions([]);
+      setPastSessions([]);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    // Convert mentorId to an integer
-    const mentorId = parseInt(formData.mentorId, 10);
-    if (isNaN(mentorId)) {
-        alert("Invalid mentor selected.");
-        return;
-    }
+  // Handle Form Input Change
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
-    // Get and validate the student ID from localStorage
-    const userId = localStorage.getItem("userId");
-    if (!userId) {
-        console.error("User ID not found in localStorage. Please log in again.");
-        return;
-    }
-
-    const studentId = parseInt(userId, 10);
-    if (isNaN(studentId)) {
-        console.error("Invalid user ID in localStorage.");
-        return;
-    }
-
-    // Format date as YYYY-MM-DD
-    const formattedDate = formData.date.toISOString().split("T")[0];
-
-    // Format time as HH:MM:SS
-    const formattedTime = formData.time.toTimeString().split(" ")[0];
-
-    const requestData = {
-        title: formData.title,  // Include the session title
-        // mentor: mentorId,  // Use the mentorId from formData
-        mentor: parseInt(formData.mentorId, 10), // Ensure it's an integer
-        student: studentId,  // Use the validated student ID
-        date: formattedDate,  // Use formatted date
-        time: formattedTime,  // Use formatted time
-        goals: formData.goals || "",
-        status: "upcoming",
-    };
-
-    // Debugging: Log the request payload
-    console.log("Request Payload:", requestData);
+  // Handle Session Request Submission
+  const handleSubmitSession = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
 
     try {
-        const response = await axios.post(
-            "http://127.0.0.1:8000/api/v1/mentoring-sessions/",
-            requestData,
-            {
-                headers: {
-                    Authorization: `Token ${token}`,
-                    "Content-Type": "application/json",
-                },
-            }
-        );
-        alert("Session booked successfully!");
-        setShowBookingModal(false);
-        fetchSessions(); // Refresh session list
+      const token = Cookies.get('access_token');
+      if (!token) {
+        toast.error('Please log in first');
+        setSubmitting(false);
+        return;
+      }
+
+      // Validate form data
+      if (!formData.teacher) {
+        toast.error('Please select a teacher');
+        setSubmitting(false);
+        return;
+      }
+
+      if (!formData.topic || formData.topic.trim() === '') {
+        toast.error('Please enter a topic');
+        setSubmitting(false);
+        return;
+      }
+
+      if (!formData.date_time) {
+        toast.error('Please select date and time');
+        setSubmitting(false);
+        return;
+      }
+
+      if (!formData.duration) {
+        toast.error('Please select duration');
+        setSubmitting(false);
+        return;
+      }
+
+      // Prepare data for API
+      const sessionData = {
+        teacher_id: parseInt(formData.teacher),
+        topic: formData.topic.trim(),
+        start_time: formData.date_time,
+        duration: parseInt(formData.duration),
+      };
+
+      // Make API call
+      const response = await apiInstance.post('mentoring-sessions/', sessionData);
+
+      if (response.status === 201 || response.status === 200) {
+        toast.success('Mentoring session requested successfully!');
+        
+        // Reset form
+        setFormData({
+          teacher: '',
+          topic: '',
+          date_time: '',
+          duration: '30',
+        });
+
+        // Refresh sessions list
+        fetchSessions();
+        
+        // Switch to upcoming sessions tab
+        setActiveTab('upcoming');
+      }
     } catch (error) {
-        console.error(
-            "Error booking session:",
-            error.response ? error.response.data : error
-        );
-        alert("Failed to book session. Please check your input and try again.");
+      console.error('Error creating session:', error);
+      
+      // Better error handling
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        if (typeof errorData === 'object') {
+          const errorMessage = Object.values(errorData).flat().join(', ');
+          toast.error(errorMessage || 'Failed to request session');
+        } else {
+          toast.error(errorData.detail || 'Failed to request session');
+        }
+      } else {
+        toast.error('Failed to request session. Please try again.');
+      }
+    } finally {
+      setSubmitting(false);
     }
-};
+  };
 
-    const handleSearch = (e) => setSearchQuery(e.target.value.toLowerCase());
-    const handleFilterChange = (e) => setFilterStatus(e.target.value);
+  // Handle Join Session
+  const handleJoinSession = (joinUrl) => {
+    if (joinUrl) {
+      window.open(joinUrl, '_blank');
+    } else {
+      toast.error('Join URL not available yet');
+    }
+  };
 
-    return (
-        <>
-            <BaseHeader />
-            <div className="container my-4">
-                <h2 className="mb-4">Mentoring Sessions</h2>
+  // Format Date & Time
+  const formatDateTime = (dateString) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } catch (error) {
+      return dateString;
+    }
+  };
 
-                {/* Search and Filter */}
-                <div className="row mb-4">
-                    <div className="col-md-6 mb-3">
-                        <input
-                            type="text"
-                            className="form-control"
-                            placeholder="Search by title or mentor"
-                            onChange={handleSearch}
-                        />
-                    </div>
-                    <div className="col-md-6">
-                        <select className="form-select" onChange={handleFilterChange}>
-                            <option value="all">All</option>
-                            <option value="upcoming">Upcoming</option>
-                            <option value="completed">Completed</option>
-                            <option value="canceled">Canceled</option>
-                        </select>
-                    </div>
+  // Get Status Badge Color
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'pending':
+        return 'badge-warning';
+      case 'accepted':
+        return 'badge-success';
+      case 'rejected':
+        return 'badge-danger';
+      case 'completed':
+        return 'badge-info';
+      default:
+        return 'badge-secondary';
+    }
+  };
+
+  // Get Teacher Name
+  const getTeacherName = (teacher, teacherName) => {
+    if (teacherName) return teacherName;
+    if (!teacher) return 'Unknown Teacher';
+    if (typeof teacher === 'object') {
+      return teacher.full_name || teacher.username || 'Unknown Teacher';
+    }
+    return 'Unknown Teacher';
+  };
+
+  return (
+    <>
+      <BaseHeader />
+      
+      {/* Request Session - Full Page */}
+      {activeTab === 'request' && (
+        <div className="mentoring-request-page">
+          <div className="request-background"></div>
+          <div className="request-container">
+            {/* Left Side - Content */}
+            <div className="request-content">
+              <div className="content-header fade-in">
+                <div className="content-icon">
+                  <i className="fas fa-video"></i>
+                </div>
+                <h1>Schedule Your Mentoring Session</h1>
+                <p>Connect with expert mentors and accelerate your learning journey</p>
+              </div>
+
+              {/* Benefits */}
+              <div className="benefits-section">
+                <div className="benefit-item">
+                  <div className="benefit-icon">
+                    <i className="fas fa-clock"></i>
+                  </div>
+                  <div className="benefit-text">
+                    <h6>Flexible Timing</h6>
+                    <p>Choose a time that works best for you</p>
+                  </div>
                 </div>
 
-                {/* Schedule New Session Button */}
-                <button
-                    className="btn btn-primary mb-4"
-                    onClick={() => setShowBookingModal(true)}
-                >
-                    Schedule New Session
-                </button>
+                <div className="benefit-item">
+                  <div className="benefit-icon">
+                    <i className="fas fa-user-tie"></i>
+                  </div>
+                  <div className="benefit-text">
+                    <h6>Expert Mentors</h6>
+                    <p>Learn from experienced professionals</p>
+                  </div>
+                </div>
 
-                {/* Render Sessions */}
-                {loading ? (
-                    <div className="text-center">
-                        <div className="spinner-border text-primary" role="status">
-                            <span className="visually-hidden">Loading...</span>
-                        </div>
-                    </div>
-                ) : (
-                    filteredSessions.map((session) => (
-                        <div key={session.id} className="card mb-3 shadow-sm">
-                            <div className="card-body">
-                                <h5 className="card-title">{session.title}</h5>
-                                <p className="card-text">
-                                    <strong>Mentor:</strong>{" "}
-                                    {session.mentor?.full_name || "Unknown"} <br />
-                                    <strong>Date:</strong> {session.date} <br />
-                                    <strong>Time:</strong> {session.time} <br />
-                                    <strong>Status:</strong>{" "}
-                                    <span className="badge bg-success">{session.status}</span>
-                                </p>
-                            </div>
-                        </div>
-                    ))
-                )}
-
-                {/* Booking Modal */}
-                <Modal
-                    show={showBookingModal}
-                    onHide={() => setShowBookingModal(false)}
-                >
-                    <Modal.Header closeButton>
-                        <Modal.Title>Schedule New Session</Modal.Title>
-                    </Modal.Header>
-                    <Modal.Body>
-                        <Form>
-                            {/* Mentor Selection */}
-                            <Form.Group className="mb-3">
-    <Form.Label>Session Title</Form.Label>
-    <Form.Control
-        type="text"
-        placeholder="Enter session title"
-        value={formData.title}
-        onChange={(e) =>
-            setFormData({ ...formData, title: e.target.value })
-        }
-        style={{ fontSize: "16px", padding: "12px" }}
-    />
-</Form.Group>
-
-                            <Form.Group className="mb-3">
-                                <Form.Label>Choose Mentor</Form.Label>
-                                <Form.Select
-    style={{ fontSize: "18px", padding: "12px" }}
-    onChange={(e) => {
-        console.log("Selected Mentor ID:", e.target.value); // Debugging
-        setFormData({ ...formData, mentorId: (e.target.value) });
-    }}
->
-    <option value="">Select</option>
-    {mentors.map((mentor) => (
-        <option key={mentor.id} value={mentor.id}> {/* ✅ Use mentor.id here */}
-            {mentor.full_name} - {mentor.expertise}
-        </option>
-    ))}
-</Form.Select>
- 
-                            </Form.Group>
-
-                            {/* Date Picker */}
-                            <Form.Group className="mb-3">
-                                <Form.Label>Date</Form.Label>
-                                <DatePicker
-                                    selected={formData.date}
-                                    onChange={(date) => setFormData({ ...formData, date })}
-                                    dateFormat="yyyy-MM-dd"  // Format date as YYYY-MM-DD
-                                    minDate={new Date()}  // Prevent past dates
-                                    className="form-control"
-                                    placeholderText="Select a date"
-                                    style={{ fontSize: "18px", padding: "12px", width: "100%" }}
-                                />
-                            </Form.Group>
-
-                            {/* Time Picker */}
-                            <Form.Group className="mb-3">
-                                <Form.Label>Time</Form.Label>
-                                <DatePicker
-                                    selected={formData.time}
-                                    onChange={(time) => setFormData({ ...formData, time })}
-                                    showTimeSelect
-                                    showTimeSelectOnly
-                                    timeIntervals={30}  // 30-minute intervals
-                                    timeCaption="Time"
-                                    dateFormat="HH:mm"  // Format time as HH:MM
-                                    className="form-control"
-                                    placeholderText="Select a time"
-                                    style={{ fontSize: "18px", padding: "12px", width: "100%" }}
-                                />
-                            </Form.Group>
-
-                            {/* Goals Input */}
-                            <Form.Group className="mb-3">
-                                <Form.Label>Goals (Optional)</Form.Label>
-                                <Form.Control
-                                    as="textarea"
-                                    rows={3}
-                                    placeholder="Enter session goals"
-                                    style={{ fontSize: "16px", padding: "12px" }}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, goals: e.target.value })
-                                    }
-                                />
-                            </Form.Group>
-                        </Form>
-                    </Modal.Body>
-                    <Modal.Footer>
-                        <Button
-                            variant="secondary"
-                            onClick={() => setShowBookingModal(false)}
-                        >
-                            Close
-                        </Button>
-                        <Button variant="primary" onClick={handleBooking}>
-                            Schedule
-                        </Button>
-                    </Modal.Footer>
-                </Modal>
+                <div className="benefit-item">
+                  <div className="benefit-icon">
+                    <i className="fas fa-chart-line"></i>
+                  </div>
+                  <div className="benefit-text">
+                    <h6>Personal Growth</h6>
+                    <p>Get personalized guidance and feedback</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <BaseFooter />
-        </>
-    );
-}
+            {/* Right Side - Form */}
+            <div className="request-form-wrapper">
+              <form onSubmit={handleSubmitSession} className="request-form">
+                <div className="form-title">
+                  <h2>Request a Session</h2>
+                  <p>Complete the form to book your mentoring session</p>
+                </div>
+
+                {/* Form Fields */}
+                <div className="form-fields">
+                  {/* Select Teacher */}
+                  <div className="form-group">
+                    <label className="form-label">
+                      <i className="fas fa-user-tie"></i>
+                      Select Teacher
+                    </label>
+                    <select
+                      name="teacher"
+                      value={formData.teacher}
+                      onChange={handleChange}
+                      className="form-select"
+                      required
+                    >
+                      <option value="">Choose a teacher...</option>
+                      {Array.isArray(teachers) && teachers.length > 0 ? (
+                        teachers.map(teacher => (
+                          <option key={teacher.id} value={teacher.id}>
+                            {teacher.full_name || 'Unknown Teacher'}
+                          </option>
+                        ))
+                      ) : (
+                        <option disabled>No teachers available</option>
+                      )}
+                    </select>
+                    <small className="form-hint">Select the teacher you want to learn from</small>
+                  </div>
+
+                  {/* Topic */}
+                  <div className="form-group">
+                    <label className="form-label">
+                      <i className="fas fa-lightbulb"></i>
+                      Topic
+                    </label>
+                    <input
+                      type="text"
+                      name="topic"
+                      value={formData.topic}
+                      onChange={handleChange}
+                      className="form-input"
+                      placeholder="e.g., Advanced React Hooks, Django REST API"
+                      maxLength="200"
+                      required
+                    />
+                    <small className="form-hint">What topic do you want to learn about?</small>
+                  </div>
+
+                  {/* Date & Time */}
+                  <div className="form-group">
+                    <label className="form-label">
+                      <i className="fas fa-calendar"></i>
+                      Date & Time
+                    </label>
+                    <input
+                      type="datetime-local"
+                      name="date_time"
+                      value={formData.date_time}
+                      onChange={handleChange}
+                      className="form-input"
+                      required
+                    />
+                    <small className="form-hint">Select when you want to have the session</small>
+                  </div>
+
+                  {/* Duration */}
+                  <div className="form-group">
+                    <label className="form-label">
+                      <i className="fas fa-hourglass-half"></i>
+                      Duration
+                    </label>
+                    <select
+                      name="duration"
+                      value={formData.duration}
+                      onChange={handleChange}
+                      className="form-select"
+                      required
+                    >
+                      <option value="15">15 minutes</option>
+                      <option value="30">30 minutes</option>
+                      <option value="45">45 minutes</option>
+                      <option value="60">1 hour</option>
+                      <option value="90">1.5 hours</option>
+                      <option value="120">2 hours</option>
+                    </select>
+                    <small className="form-hint">How long do you need for this session?</small>
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    className="btn-request-submit"
+                    disabled={submitting}
+                  >
+                    {submitting ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin me-2"></i>
+                        Requesting...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-paper-plane me-2"></i>
+                        Request Session
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Other Tabs - Container */}
+      {activeTab !== 'request' && (
+        <div className="mentoring-page">
+          <div className="container py-5">
+            {/* Tab Navigation - Top */}
+            <div className="tab-navigation-top mb-4">
+              <div className="tab-buttons">
+                <button
+                  className={`tab-btn ${activeTab === 'upcoming' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('upcoming')}
+                >
+                  <i className="fas fa-calendar-alt me-2"></i>
+                  Upcoming Sessions
+                  {upcomingSessions.length > 0 && (
+                    <span className="badge bg-primary ms-2">{upcomingSessions.length}</span>
+                  )}
+                </button>
+                <button
+                  className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('history')}
+                >
+                  <i className="fas fa-history me-2"></i>
+                  History
+                  {pastSessions.length > 0 && (
+                    <span className="badge bg-secondary ms-2">{pastSessions.length}</span>
+                  )}
+                </button>
+                <button
+                  className="tab-btn back-to-form"
+                  onClick={() => setActiveTab('request')}
+                >
+                  <i className="fas fa-plus-circle me-2"></i>
+                  New Request
+                </button>
+              </div>
+            </div>
+
+            {/* Upcoming Sessions Tab */}
+            {activeTab === 'upcoming' && (
+              <div className="tab-pane active fade-in">
+                {loading ? (
+                  <div className="loading-state">
+                    <div className="spinner-border text-primary" role="status">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <p className="mt-3">Loading sessions...</p>
+                  </div>
+                ) : Array.isArray(upcomingSessions) && upcomingSessions.length > 0 ? (
+                  <div className="sessions-grid">
+                    {upcomingSessions.map(session => (
+                      <div key={session.id} className="session-card slide-in-left">
+                        <div className="session-header">
+                          <div className="session-icon">
+                            <i className="fas fa-video"></i>
+                          </div>
+                          <div className="session-status">
+                            <span className={`badge ${getStatusColor(session.status)}`}>
+                              {session.status || 'pending'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="session-content">
+                          <h5 className="session-title">
+                            {session.topic || 'Untitled Session'}
+                          </h5>
+
+                          <div className="session-detail">
+                            <i className="fas fa-user-circle"></i>
+                            <span>{getTeacherName(session.teacher, session.teacher_name)}</span>
+                          </div>
+
+                          <div className="session-detail">
+                            <i className="fas fa-calendar"></i>
+                            <span>{formatDateTime(session.start_time)}</span>
+                          </div>
+
+                          <div className="session-detail">
+                            <i className="fas fa-hourglass-end"></i>
+                            <span>{session.duration || '0'} minutes</span>
+                          </div>
+
+                          {session.join_url && (
+                            <div className="session-detail">
+                              <i className="fas fa-link"></i>
+                              <span className="text-success">Meeting link available</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="session-actions">
+                          {session.status?.toLowerCase() === 'accepted' && session.join_url ? (
+                            <button
+                              className="btn-join"
+                              onClick={() => handleJoinSession(session.join_url)}
+                            >
+                              <i className="fas fa-video me-2"></i>
+                              Join Now
+                            </button>
+                          ) : session.status?.toLowerCase() === 'pending' ? (
+                            <button className="btn-pending" disabled>
+                              <i className="fas fa-hourglass-start me-2"></i>
+                              Awaiting Acceptance
+                            </button>
+                          ) : (
+                            <button className="btn-disabled" disabled>
+                              <i className="fas fa-times-circle me-2"></i>
+                              {session.status || 'Unavailable'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="empty-state">
+                    <div className="empty-icon">
+                      <i className="fas fa-calendar-times"></i>
+                    </div>
+                    <h5>No Upcoming Sessions</h5>
+                    <p>You don't have any upcoming mentoring sessions.</p>
+                    <button
+                      className="btn-action"
+                      onClick={() => setActiveTab('request')}
+                    >
+                      <i className="fas fa-plus me-2"></i>
+                      Request a Session
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Session History Tab */}
+            {activeTab === 'history' && (
+              <div className="tab-pane active fade-in">
+                {loading ? (
+                  <div className="loading-state">
+                    <div className="spinner-border text-primary" role="status">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <p className="mt-3">Loading history...</p>
+                  </div>
+                ) : Array.isArray(pastSessions) && pastSessions.length > 0 ? (
+                  <div className="sessions-grid">
+                    {pastSessions.map(session => (
+                      <div key={session.id} className="session-card history-card slide-in-left">
+                        <div className="session-header">
+                          <div className="session-icon completed">
+                            <i className="fas fa-check-circle"></i>
+                          </div>
+                          <div className="session-status">
+                            <span className={`badge ${getStatusColor(session.status)}`}>
+                              Completed
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="session-content">
+                          <h5 className="session-title">
+                            {session.topic || 'Untitled Session'}
+                          </h5>
+
+                          <div className="session-detail">
+                            <i className="fas fa-user-circle"></i>
+                            <span>{getTeacherName(session.teacher, session.teacher_name)}</span>
+                          </div>
+
+                          <div className="session-detail">
+                            <i className="fas fa-calendar"></i>
+                            <span>{formatDateTime(session.start_time)}</span>
+                          </div>
+
+                          <div className="session-detail">
+                            <i className="fas fa-hourglass-end"></i>
+                            <span>{session.duration || '0'} minutes</span>
+                          </div>
+                        </div>
+
+                        <div className="session-actions">
+                          <button className="btn-history" disabled>
+                            <i className="fas fa-archive me-2"></i>
+                            Session Completed
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="empty-state">
+                    <div className="empty-icon">
+                      <i className="fas fa-history"></i>
+                    </div>
+                    <h5>No Session History</h5>
+                    <p>You haven't completed any mentoring sessions yet.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      <BaseFooter />
+    </>
+  );
+};
 
 export default MentoringSessions;

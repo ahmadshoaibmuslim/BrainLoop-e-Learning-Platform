@@ -135,13 +135,12 @@ function Courses() {
                                                         <td><p className='mt-3'>{c.lectures?.length}</p></td>
                                                         <td><p className='mt-3'>{c.completed_lessons?.length}</p></td>
                                                         <td>
-                                                            {/* not working  */}
                                                             {c.completed_lessons?.length < 1 && (
-                                                                <button className='btn btn-success btn-sm mt-3'>Start Course <i className='fas fa-arrow-right ms-2'></i></button>
+                                                                <Link to={`/student/courses/${c.enrollment_id}`} className='btn btn-success btn-sm mt-3'>Start Course <i className='fas fa-arrow-right ms-2'></i></Link>
                                                             )}
 
                                                             {c.completed_lessons?.length > 0 && (
-                                                                <button className='btn btn-primary btn-sm mt-3'>Continue Course <i className='fas fa-arrow-right ms-2'></i></button>
+                                                                <Link to={`/student/courses/${c.enrollment_id}`} className='btn btn-primary btn-sm mt-3'>Continue Course <i className='fas fa-arrow-right ms-2'></i></Link>
                                                             )}
 
                                                         </td>

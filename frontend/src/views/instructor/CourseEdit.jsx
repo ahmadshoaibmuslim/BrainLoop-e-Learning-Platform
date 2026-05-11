@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link, useParams } from 'react-router-dom';
 import moment from "moment";
 import { CKEditor } from "@ckeditor/ckeditor5-react";
 import ClassicEditor from "@ckeditor/ckeditor5-build-classic";
@@ -9,7 +10,6 @@ import Sidebar from './Partials/Sidebar'
 import Header from './Partials/Header'
 import BaseHeader from '../partials/BaseHeader'
 import BaseFooter from '../partials/BaseFooter'
-import { Link } from 'react-router-dom';
 
 import useAxios from '../../utils/useAxios';
 import UserData from '../plugin/UserData';
@@ -17,6 +17,10 @@ import { object } from 'prop-types';
 import Swal from 'sweetalert2';
 
 function CourseEdit() {
+  const api = useAxios();
+  const user = UserData();
+  const teacherId = user?.teacher_id;
+  const param = useParams();
 
   const [course, setCourse] = useState({
     category: "",
@@ -28,14 +32,13 @@ function CourseEdit() {
     level: "",
     language: "",
     teacher_course_status: "",
+    slug: "",
+  });
 
-  })
-
-  const [category, setCategory] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [progress, setProgress] = useState(0);
   const [cKEditorData, setCKEditorData] = useState("");
 
-  const param = useParams()
 
   const [variants, SetVariants] = useState([
     {
@@ -45,21 +48,75 @@ function CourseEdit() {
     }
   ]);
 
-  const fetchCourseDetails =() =>{
-    useAxios().get(`course/category/`).then((res) => {
-      setCategory(res.data)
-    })
+  const fetchCourseDetails = async () => {
+    try {
+      const categoryRes = await api.get(`course/category/`);
+      setCategories(categoryRes.data || []);
+    } catch (error) {
+      console.error("Failed to load categories", error);
+    }
 
-    useAxios().get(`teacher/course-detail/${param.course_id}/`).then((res) => {
-      setCourse(res.data)
-      SetVariants(res.data.variants)
-      setCKEditorData(res.data.description)
-    })
+    try {
+      const res = await api.get(`teacher/course-detail/${param.course_id}/`);
+      const data = res.data;
+      setCourse({
+        category: data.category?.id || data.category || "",
+        file: data.file || "",
+        image: data.image || "",
+        title: data.title || "",
+        description: data.description || "",
+        price: data.price || "",
+        level: data.level || "",
+        language: data.language || "",
+        teacher_course_status: data.teacher_course_status || "",
+        slug: data.slug || "",
+      });
+      SetVariants(data.variants || []);
+      setCKEditorData(data.description || "");
+    } catch (error) {
+      console.error("Failed to load course details", error);
+    }
   };
 
-  useEffect(() =>{
-    fetchCourseDetails()
-  },[])
+  useEffect(() => {
+    if (param?.course_id) {
+      fetchCourseDetails();
+    }
+  }, [param.course_id]);
+
+  const handleCourseChange = (e) => {
+    const { name, value } = e.target;
+    setCourse((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSaveCourse = async () => {
+    if (!teacherId || !param?.course_id) {
+      Swal.fire('Error', 'Unable to save course. Instructor or course ID missing.', 'error');
+      return;
+    }
+
+    try {
+      const payload = {
+        title: course.title,
+        description: course.description,
+        price: course.price,
+        level: course.level,
+        language: course.language,
+        teacher_course_status: course.teacher_course_status,
+        category: course.category,
+      };
+
+      await api.put(`/teacher/course-update/${teacherId}/${param.course_id}/`, payload);
+      Swal.fire('Success!', 'Course changes have been saved successfully.', 'success');
+    } catch (error) {
+      console.error('Failed to save course', error);
+      Swal.fire('Error', error.response?.data?.detail || 'Unable to save course. Please try again.', 'error');
+    }
+  };
+
   return (
     <>
       <BaseHeader />
@@ -103,7 +160,7 @@ function CourseEdit() {
                     </div>
                     <div className="card-body">
                       <label htmlFor="courseTHumbnail" className="form-label">Thumbnail Preview</label>
-                      <img style={{ width: "100%", height: "330px", objectFit: "cover", borderRadius: "10px" }} className='mb-4' src="https://www.eclosio.ong/wp-content/uploads/2018/08/default.png" alt="" />
+                      <img style={{ width: "100%", height: "330px", objectFit: "cover", borderRadius: "10px" }} className='mb-4' src={course.image || "https://www.eclosio.ong/wp-content/uploads/2018/08/default.png"} alt="Course Thumbnail" />
                       <div className="mb-3">
                         <label htmlFor="courseTHumbnail" className="form-label">Course Thumbnail</label>
                         <input
@@ -113,7 +170,7 @@ function CourseEdit() {
                         />
                       </div>
                       <div className="mb-3">
-                        <label htmlFor="courseTitle" className="form-label">
+                        <label htmlFor="introvideo" className="form-label">
                           Intro Video
                         </label>
                         <input
@@ -128,52 +185,98 @@ function CourseEdit() {
                         </label>
                         <input
                           id="courseTitle"
+                          name="title"
+                          value={course.title}
+                          onChange={handleCourseChange}
                           className="form-control"
                           type="text"
-                          placeholder=""
+                          placeholder="Enter course title"
                         />
                         <small>Write a 60 character course title.</small>
                       </div>
                       <div className="mb-3">
                         <label className="form-label">Courses category</label>
-                        <select className="form-select">
-                          <option value="">-------------</option>
-                          <option value="React">React</option>
-                          <option value="Javascript">Javascript</option>
-                          <option value="HTML">HTML</option>
-                          <option value="Vue">Vue js</option>
-                          <option value="Gulp">Gulp js</option>
+                        <select
+                          name="category"
+                          className="form-select"
+                          value={course.category}
+                          onChange={handleCourseChange}
+                        >
+                          <option value="">Select category</option>
+                          {categories.map((cat) => (
+                            <option key={cat.id} value={cat.id}>{cat.title}</option>
+                          ))}
                         </select>
                         <small>
-                          Help people find your courses by choosing categories
-                          that represent your course.
+                          Help people find your course by choosing the right category.
                         </small>
                       </div>
                       <div className="mb-3">
-                        <option value="">-------------</option>
-                        <select className="form-select">
+                        <select
+                          name="level"
+                          className="form-select"
+                          value={course.level}
+                          onChange={handleCourseChange}
+                        >
                           <option value="">Select level</option>
-                          <option value="intermediate">Intermediate</option>
-                          <option value="Beignners">Beignners</option>
-                          <option value="Advance">Advance</option>
+                          <option value="Beginner">Beginner</option>
+                          <option value="Intermediate">Intermediate</option>
+                          <option value="Advanced">Advanced</option>
                         </select>
                       </div>
                       <div className="mb-3">
                         <label className="form-label">Course Description</label>
-                        <textarea name="" className='form-control' id="" cols="30" rows="10"></textarea>
-                        <small>A brief summary of your courses.</small>
+                        <textarea
+                          name="description"
+                          className='form-control'
+                          value={course.description}
+                          onChange={handleCourseChange}
+                          cols="30"
+                          rows="10"
+                        />
+                        <small>A brief summary of your course.</small>
                       </div>
-                      <label htmlFor="courseTitle" className="form-label">
+                      <label htmlFor="coursePrice" className="form-label">
                         Price
                       </label>
                       <input
-                        id="courseTitle"
+                        id="coursePrice"
+                        name="price"
+                        value={course.price}
+                        onChange={handleCourseChange}
                         className="form-control"
                         type="number"
                         placeholder="$20.99"
                       />
+                      <div className="mb-3 mt-3">
+                        <label className="form-label">Language</label>
+                        <select
+                          name="language"
+                          className="form-select"
+                          value={course.language}
+                          onChange={handleCourseChange}
+                        >
+                          <option value="">Select language</option>
+                          <option value="English">English</option>
+                          <option value="Spanish">Spanish</option>
+                          <option value="French">French</option>
+                        </select>
+                      </div>
+                      <div className="mb-3">
+                        <label className="form-label">Status</label>
+                        <select
+                          name="teacher_course_status"
+                          className="form-select"
+                          value={course.teacher_course_status}
+                          onChange={handleCourseChange}
+                        >
+                          <option value="">Select status</option>
+                          <option value="Published">Published</option>
+                          <option value="Draft">Draft</option>
+                          <option value="Disabled">Disabled</option>
+                        </select>
+                      </div>
                     </div>
-
 
                     {/* Curriculum Section */}
                     <div className="card-header border-bottom px-4 py-3">
@@ -213,7 +316,7 @@ function CourseEdit() {
                     </div>
 
                   </div>
-                  <button className='btn btn-lg btn-success w-100 mt-2' type='button'>Save Changes <i className='fas fa-check-circle'></i></button>
+                  <button onClick={handleSaveCourse} className='btn btn-lg btn-success w-100 mt-2' type='button'>Save Changes <i className='fas fa-check-circle'></i></button>
                 </section>
               </>
 

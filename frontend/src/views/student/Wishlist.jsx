@@ -10,31 +10,37 @@ import Header from "./Partials/Header";
 
 import useAxios from "../../utils/useAxios";
 import UserData from "../plugin/UserData";
+import { useAuthStore } from "../../store/auth";
 import toast from '../plugin/toast';
-import CartId from "../plugin/CartId";
+import CartId from "../plugin/cartId";
 import GetCurrentAddress from "../plugin/UserCountry";
 import { CartContext } from "../plugin/Context";
 
 function Wishlist() {
     const [wishlist, setWishlist] = useState([]);
     const [cartCount, setCartCount] = useContext(CartContext);
-    const userId = UserData()?.user_id;
-    console.log("User ID:", userId); // Check the value of userId
-
+    const authUser = useAuthStore((state) => state.allUserData);
+    const userId = authUser?.user_id || UserData()?.user_id;
+    console.log("User ID:", userId);
 
     const fetchWishlist = () => {
+        if (!userId) return;
         useAxios()
-            .get(`student/wishlist/${UserData()?.user_id}/`)
+            .get(`student/wishlist/${userId}/`)
             .then((res) => {
-                console.log(res.data);
-                setWishlist(res.data);
+                console.log("Wishlist fetched:", res.data);
+                setWishlist(res.data || []);
+            })
+            .catch((err) => {
+                console.error("Error fetching wishlist:", err);
+                setWishlist([]);
             });
     };
     const country = GetCurrentAddress()?.country;
 
     useEffect(() => {
         fetchWishlist();
-    }, []);
+    }, [userId]);
 
     const addToCart = async (courseId, userId, price, country, cartId) => {
         if (!courseId || !userId || !price || !country || !cartId) {
@@ -73,22 +79,38 @@ function Wishlist() {
     };
     
 
-    const addToWishlist = (courseId) => {
+    const addToWishlist = async (courseId) => {
+        if (!courseId) return;
+
         const formdata = new FormData();
         formdata.append("user_id", UserData()?.user_id);
         formdata.append("course_id", courseId);
 
-        useAxios()
-            .post(`student/wishlist/${UserData()?.user_id}/`, formdata)
-            .then((res) => {
-                console.log(res.data);
-                fetchWishlist();
-                toast.success(res.data.message || "Wishlist updated");
-            })
-            .catch((err) => {
-                console.error("Error updating wishlist:", err);
-                toast.error("Failed to update wishlist");
-            });
+        try {
+            const res = await useAxios().post(`student/wishlist/${userId}/`, formdata);
+            console.log("Wishlist response:", res.data);
+            // Refresh list and notify user
+            await fetchWishlist();
+            toast.success(res.data.message || "Wishlist updated");
+        } catch (err) {
+            console.error("Error updating wishlist:", err?.response || err.message || err);
+            const message = err?.response?.data?.detail || err?.response?.data?.message || "Failed to update wishlist";
+            toast.error(message);
+        }
+    };
+
+    const removeFromWishlist = async (wishlistId) => {
+        if (!wishlistId) return;
+        try {
+            const res = await useAxios().delete(`student/wishlist-delete/${wishlistId}/`);
+            console.log('Removed wishlist:', res.data);
+            await fetchWishlist();
+            toast.success(res.data.message || 'Wishlist item removed');
+        } catch (err) {
+            console.error('Error removing wishlist item:', err?.response || err);
+            const message = err?.response?.data?.detail || err?.response?.data?.message || 'Failed to remove wishlist item';
+            toast.error(message);
+        }
     };
 
     return (
@@ -111,8 +133,8 @@ function Wishlist() {
                             <div className="row">
                                 <div className="col-md-12">
                                     <div className="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
-                                        {wishlist?.map((w, index) => (
-                                            <div className="col-lg-4">
+                                        {wishlist?.map((w) => (
+                                            <div className="col-lg-4" key={w.id}>
                                                 {/* Card */}
                                                 <div className="card card-hover">
                                                     <Link to={`/course-detail/${w.course?.slug}/`}>
@@ -141,6 +163,7 @@ function Wishlist() {
                                                             <a
                                                                 onClick={() => addToWishlist(w.course?.id)}
                                                                 className="fs-5"
+                                                                style={{ cursor: 'pointer' }}
                                                             >
                                                                 <i className="fas fa-heart text-danger align-middle" />
                                                             </a>
@@ -179,9 +202,9 @@ function Wishlist() {
                                                     <div className="card-footer">
                                                         <div className="row align-items-center g-0">
                                                             <div className="col">
-                                                                <h5 className="mb-0">${w.course?.price}</h5>
+                                                                <h5 className="mb-0">${Number(w.course?.price).toFixed(2)}</h5>
                                                             </div>
-                                                            <div className="col-auto">
+                                                            <div className="col-auto d-flex gap-2">
                                                                 <button
                                                                     type="button"
                                                                     onClick={() =>
@@ -197,13 +220,13 @@ function Wishlist() {
                                                                 >
                                                                     <i className="fas fa-shopping-cart text-primary text-white" />
                                                                 </button>
-                                                                <Link
-                                                                    to={""}
-                                                                    className="text-inherit text-decoration-none btn btn-primary"
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeFromWishlist(w.id)}
+                                                                    className="text-inherit text-decoration-none btn btn-outline-danger"
                                                                 >
-                                                                    Enroll Now{" "}
-                                                                    <i className="fas fa-arrow-right text-primary align-middle me-2 text-white" />
-                                                                </Link>
+                                                                    Remove
+                                                                </button>
                                                             </div>
                                                         </div>
                                                     </div>

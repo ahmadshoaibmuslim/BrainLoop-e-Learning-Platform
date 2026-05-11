@@ -1,4 +1,5 @@
 import { useState,useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import moment from "moment"
 import Sidebar from './Partials/Sidebar'
 import Header from './Partials/Header'
@@ -7,32 +8,70 @@ import BaseHeader from '../partials/BaseHeader'
 import BaseFooter from '../partials/BaseFooter'
 import useAxios from "../../utils/useAxios"
 import UserData from '../plugin/UserData'
+import Swal from 'sweetalert2'
 
 
 
 function Dashboard() {
     
     const [courses, setCourses] = useState([]);
+    const [summary, setSummary] = useState({ total_courses: 0, total_students: 0, total_revenue: 0 });
     const api = useAxios();
     const user = UserData(); // get teacher_id from this
     const teacherId = user?.teacher_id;
     console.log("User Data:", user);
 
-    const totalCourses = courses.length;
+    const handleDeleteCourse = async (courseId) => {
+        if (!courseId) return;
+
+        const result = await Swal.fire({
+            title: 'Delete Course?',
+            text: 'This action cannot be undone.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Delete',
+            cancelButtonText: 'Cancel',
+        });
+
+        if (!result.isConfirmed) return;
+
+        try {
+            await api.delete(`/teacher/course-delete/${teacherId}/${courseId}/`);
+            Swal.fire('Deleted!', 'Course has been deleted successfully.', 'success');
+            const res = await api.get(`/teacher/course-lists/${teacherId}/`);
+            setCourses(res.data);
+            const summaryRes = await api.get(`/teacher/summary/${teacherId}/`);
+            const summaryData = summaryRes.data;
+            if (Array.isArray(summaryData) && summaryData.length > 0) {
+                setSummary(summaryData[0]);
+            } else if (summaryData && typeof summaryData === 'object') {
+                setSummary(summaryData);
+            }
+        } catch (error) {
+            console.error("Failed to delete course", error);
+            Swal.fire('Error', 'Failed to delete course. Please try again.', 'error');
+        }
+    };
+
+    const totalCourses = summary.total_courses || courses.length;
     
-    const totalStudents = courses.reduce((sum, course) => {
-        return sum + (course.students?.length || 0);
+    const totalStudents = summary.total_students || courses.reduce((sum, course) => {
+        return sum + (course.total_students || course.students?.length || 0);
     }, 0);
     
-    const totalRevenue = courses.reduce((sum, course) => {
-        const studentsCount = course.students?.length || 0;
+    const fallbackRevenue = courses.reduce((sum, course) => {
+        const studentCount = course.total_students || course.students?.length || 0;
         const price = parseFloat(course.price) || 0;
-        return sum + (studentsCount * price);
+        return sum + studentCount * price;
     }, 0);
+    const totalRevenue = parseFloat(summary.total_revenue) || fallbackRevenue || 0;
 
 
 
     console.log("Courses Data:", courses);
+    console.log("Summary Data:", summary);
 
     useEffect(() => {
         const fetchCourses = async () => {
@@ -43,9 +82,24 @@ function Dashboard() {
                 console.error("Failed to load courses", error);
             }
         };
+
+        const fetchSummary = async () => {
+            try {
+                const res = await api.get(`/teacher/summary/${teacherId}/`);
+                const data = res.data;
+                if (Array.isArray(data) && data.length > 0) {
+                    setSummary(data[0]);
+                } else if (data && typeof data === 'object') {
+                    setSummary(data);
+                }
+            } catch (error) {
+                console.error("Failed to load instructor summary", error);
+            }
+        };
     
         if (teacherId) {
             fetchCourses();
+            fetchSummary();
         }
     }, [teacherId]);
     
@@ -197,14 +251,20 @@ function Dashboard() {
                     </div>
                 </div>
             </td>
-            <td><p className='mt-3'>{course.total_students || 0}</p></td>
+            <td><p className='mt-3'>{course.total_students || course.students?.length || 0}</p></td>
             <td><p className='mt-3 badge bg-success'>{course.level}</p></td>
-            <td><p className='mt-3 badge bg-warning text-dark'>{course.status || "Pending"}</p></td>
-            <td><p className='mt-3'>{moment(course.created_at).format("DD MMM, YYYY")}</p></td>
+            <td><p className='mt-3 badge bg-warning text-dark'>{course.status || course.teacher_course_status || "Pending"}</p></td>
+            <td><p className='mt-3'>{moment(course.created_at || course.date).format("DD MMM, YYYY")}</p></td>
             <td>
-                <button className='btn btn-primary btn-sm mt-3 me-1'><i className='fas fa-edit'></i></button>
-                <button className='btn btn-danger btn-sm mt-3 me-1'><i className='fas fa-trash'></i></button>
-                <button className='btn btn-secondary btn-sm mt-3 me-1'><i className='fas fa-eye'></i></button>
+                <Link to={course.course_id ? `/instructor/edit-course/${course.course_id}/` : '#'} className='btn btn-primary btn-sm mt-3 me-1'>
+                    <i className='fas fa-edit'></i>
+                </Link>
+                <button type="button" onClick={() => handleDeleteCourse(course.course_id)} className='btn btn-danger btn-sm mt-3 me-1'>
+                    <i className='fas fa-trash'></i>
+                </button>
+                <Link to={course.slug ? `/course-detail/${course.slug}/` : '#'} className='btn btn-secondary btn-sm mt-3 me-1'>
+                    <i className='fas fa-eye'></i>
+                </Link>
             </td>
         </tr>
     )) : (

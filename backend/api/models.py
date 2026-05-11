@@ -472,43 +472,40 @@ class Country(models.Model):
 from django.conf import settings  # Import settings to access AUTH_USER_MODEL
 
 class MentoringSession(models.Model):
+    STATUS_PENDING = 'pending'
+    STATUS_ACCEPTED = 'accepted'
+    STATUS_REJECTED = 'rejected'
+
     STATUS_CHOICES = [
-        ('upcoming', 'Upcoming'),
-        ('completed', 'Completed'),
-        ('canceled', 'Canceled'),
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_ACCEPTED, 'Accepted'),
+        (STATUS_REJECTED, 'Rejected'),
     ]
-    title = models.CharField(max_length=100)
-    mentor = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.CASCADE, 
-        related_name="mentored_sessions"
+
+    teacher = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='teacher_sessions'
     )
     student = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.CASCADE, 
-        related_name="student_sessions"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='student_sessions'
     )
-    date = models.DateField()
-    time = models.TimeField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='upcoming')
-    join_link = models.URLField(null=True, blank=True)
-    feedback = models.TextField(null=True, blank=True)
-    rating = models.PositiveIntegerField(null=True, blank=True)
-    goals = models.TextField(null=True, blank=True)
-    resources = models.JSONField(null=True, blank=True)
-    slug = models.SlugField(unique=True, null=True, blank=True)
+    topic = models.CharField(max_length=255)
+    start_time = models.DateTimeField()
+    duration = models.PositiveIntegerField(help_text='Duration in minutes')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    zoom_meeting_id = models.CharField(max_length=255, blank=True, null=True)
+    join_url = models.URLField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name_plural = "Mentoring Sessions"
-        ordering = ['date', 'time']
+        verbose_name_plural = 'Mentoring Sessions'
+        ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.title} - {self.mentor} (Student: {self.student})"
-
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            self.slug = slugify(f"{self.title}-{self.mentor}-{self.date}-{self.time}")
-        super(MentoringSession, self).save(*args, **kwargs)
+        return f"{self.topic} ({self.teacher}) - {self.student}"
 
 
 # Teacher application 

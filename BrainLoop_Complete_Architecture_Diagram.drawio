@@ -1,0 +1,376 @@
+<mxfile host="app.diagrams.net" modified="2024-01-01T00:00:00.000Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" etag="brainloop-arch" version="24.1.0" type="device">
+  <diagram id="BrainLoop_Architecture" name="BrainLoop Complete Architecture">
+    <mxGraphModel dx="2000" dy="1500" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="1500" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="title" value="BrainLoop: AI-Powered Multi-Vendor E-Learning &amp; Customer Support Platform&#10;Complete System Architecture" style="text;fontSize=18;fontStyle=1;spacing=10;spacingTop=10;spacingBottom=10;" parent="1" vertex="1">
+          <mxGeometry x="400" y="20" width="1200" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- User Interface Layer -->
+        <mxCell id="ui_layer" value="USER INTERFACE LAYER" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=40;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;fillColor=#e3f2fd;strokeColor=#1976d2;" parent="1" vertex="1">
+          <mxGeometry x="50" y="100" width="450" height="200" as="geometry"/>
+        </mxCell>
+
+        <!-- UI Components -->
+        <mxCell id="student_dashboard" value="👨‍🎓 Student Dashboard&#10;- Course browsing &amp; enrollment&#10;- Progress tracking&#10;- Mentoring booking&#10;- Q&amp;A forums&#10;- Personal recommendations" style="text;strokeColor=none;fillColor=#e3f2fd;fontSize=11;spacing=5;" parent="ui_layer" vertex="1">
+          <mxGeometry x="0" y="40" width="450" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="teacher_dashboard" value="👨‍🏫 Teacher Dashboard&#10;- Course creation &amp; management&#10;- Student analytics&#10;- Mentoring sessions&#10;- Revenue tracking&#10;- Content upload" style="text;strokeColor=none;fillColor=#e3f2fd;fontSize=11;spacing=5;" parent="ui_layer" vertex="1">
+          <mxGeometry x="0" y="90" width="450" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="admin_panel" value="⚙️ Admin Panel (Django Jazzmin)&#10;- User management&#10;- Course moderation&#10;- Analytics dashboard&#10;- Payment monitoring&#10;- System configuration" style="text;strokeColor=none;fillColor=#e3f2fd;fontSize=11;spacing=5;" parent="ui_layer" vertex="1">
+          <mxGeometry x="0" y="140" width="450" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- AI Chat Widget -->
+        <mxCell id="ai_chat_widget" value="🤖 AI Chat Widget&#10;- Intelligent customer support&#10;- Intent detection routing&#10;- Multi-provider AI integration&#10;- Context-aware responses" style="rounded=1;fillColor=#fff3e0;strokeColor=#f57c00;fontSize=11;spacing=5;" parent="1" vertex="1">
+          <mxGeometry x="550" y="150" width="200" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- API Gateway Layer -->
+        <mxCell id="api_layer" value="API GATEWAY LAYER" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=40;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;fillColor=#f3e5f5;strokeColor=#7b1fa2;" parent="1" vertex="1">
+          <mxGeometry x="50" y="320" width="450" height="200" as="geometry"/>
+        </mxCell>
+
+        <!-- API Components -->
+        <mxCell id="django_rest" value="🎯 Django REST Framework&#10;- 100+ API endpoints&#10;- JWT authentication&#10;- Rate limiting&#10;- API documentation (Swagger)" style="text;strokeColor=none;fillColor=#f3e5f5;fontSize=11;spacing=5;" parent="api_layer" vertex="1">
+          <mxGeometry x="0" y="40" width="450" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="cors_middleware" value="🔄 CORS Middleware&#10;- Cross-origin requests&#10;- Security headers&#10;- Preflight handling" style="text;strokeColor=none;fillColor=#f3e5f5;fontSize=11;spacing=5;" parent="api_layer" vertex="1">
+          <mxGeometry x="0" y="80" width="450" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="auth_service" value="🔐 Authentication Service&#10;- User registration/login&#10;- Password reset&#10;- Social auth (future)&#10;- Session management" style="text;strokeColor=none;fillColor=#f3e5f5;fontSize=11;spacing=5;" parent="api_layer" vertex="1">
+          <mxGeometry x="0" y="110" width="450" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="file_upload" value="📁 File Upload API&#10;- Course materials&#10;- Profile images&#10;- Certificates&#10;- Video processing" style="text;strokeColor=none;fillColor=#f3e5f5;fontSize=11;spacing=5;" parent="api_layer" vertex="1">
+          <mxGeometry x="0" y="150" width="450" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Application Logic Layer -->
+        <mxCell id="logic_layer" value="APPLICATION LOGIC LAYER" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=40;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;fillColor=#e8f5e8;strokeColor=#388e3c;" parent="1" vertex="1">
+          <mxGeometry x="50" y="540" width="450" height="300" as="geometry"/>
+        </mxCell>
+
+        <!-- Logic Components -->
+        <mxCell id="course_mgmt" value="📚 Course Management&#10;- CRUD operations&#10;- Category organization&#10;- Search &amp; filtering&#10;- Content validation" style="text;strokeColor=none;fillColor=#e8f5e8;fontSize=11;spacing=5;" parent="logic_layer" vertex="1">
+          <mxGeometry x="0" y="40" width="450" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="user_mgmt" value="👥 User Management&#10;- Profile management&#10;- Role-based access&#10;- Teacher applications&#10;- Student enrollments" style="text;strokeColor=none;fillColor=#e8f5e8;fontSize=11;spacing=5;" parent="logic_layer" vertex="1">
+          <mxGeometry x="0" y="75" width="450" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="payment_svc" value="💳 Payment Processing&#10;- Stripe integration&#10;- PayPal integration&#10;- Transaction logging&#10;- Refund handling" style="text;strokeColor=none;fillColor=#e8f5e8;fontSize=11;spacing=5;" parent="logic_layer" vertex="1">
+          <mxGeometry x="0" y="110" width="450" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="mentoring_svc" value="🎥 Mentoring Service&#10;- Zoom API integration&#10;- Session scheduling&#10;- Meeting management&#10;- Recording storage" style="text;strokeColor=none;fillColor=#e8f5e8;fontSize=11;spacing=5;" parent="logic_layer" vertex="1">
+          <mxGeometry x="0" y="145" width="450" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="ml_recommendations" value="🧠 ML Recommendations&#10;- Collaborative filtering&#10;- Content-based matching&#10;- User behavior analysis&#10;- Course suggestions" style="text;strokeColor=none;fillColor=#e8f5e8;fontSize=11;spacing=5;" parent="logic_layer" vertex="1">
+          <mxGeometry x="0" y="180" width="450" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="analytics_svc" value="📊 Analytics Service&#10;- User engagement metrics&#10;- Course performance&#10;- Revenue analytics&#10;- Learning progress" style="text;strokeColor=none;fillColor=#e8f5e8;fontSize=11;spacing=5;" parent="logic_layer" vertex="1">
+          <mxGeometry x="0" y="215" width="450" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="notification_svc" value="🔔 Notification Service&#10;- Email notifications&#10;- In-app notifications&#10;- Push notifications&#10;- SMS alerts" style="text;strokeColor=none;fillColor=#e8f5e8;fontSize=11;spacing=5;" parent="logic_layer" vertex="1">
+          <mxGeometry x="0" y="250" width="450" height="35" as="geometry"/>
+        </mxCell>
+
+        <!-- AI Customer Support Agent -->
+        <mxCell id="ai_agent" value="🤖 AI CUSTOMER SUPPORT AGENT (Separate Django service)\n- POST /api/chat/\n- Intent detection + action routing\n- External model fallback" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=40;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;fillColor=#fff3e0;strokeColor=#f57c00;" parent="1" vertex="1">
+          <mxGeometry x="550" y="320" width="400" height="250" as="geometry"/>
+        </mxCell>
+
+        <!-- AI Agent Components -->
+        <mxCell id="intent_detection" value="🎯 Intent Detection Engine&#10;- Natural language processing&#10;- Query classification&#10;- Context analysis&#10;- Multi-intent handling" style="text;strokeColor=none;fillColor=#fff3e0;fontSize=11;spacing=5;" parent="ai_agent" vertex="1">
+          <mxGeometry x="0" y="40" width="400" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="ai_providers" value="🧠 AI Providers Integration&#10;- OpenAI GPT-4o-mini&#10;- Groq (fast inference)&#10;- Ollama (local/privacy)&#10;- Google Gemini" style="text;strokeColor=none;fillColor=#fff3e0;fontSize=11;spacing=5;" parent="ai_agent" vertex="1">
+          <mxGeometry x="0" y="75" width="400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="response_routing" value="🔀 Response Routing&#10;- order_status → Order Handler&#10;- refund_request → Refund Handler&#10;- course_info → Course Handler&#10;- general → General Chat" style="text;strokeColor=none;fillColor=#fff3e0;fontSize=11;spacing=5;" parent="ai_agent" vertex="1">
+          <mxGeometry x="0" y="115" width="400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="chat_persistence" value="💾 Chat Persistence&#10;- Message history&#10;- Intent logging&#10;- Session management&#10;- Analytics tracking" style="text;strokeColor=none;fillColor=#fff3e0;fontSize=11;spacing=5;" parent="ai_agent" vertex="1">
+          <mxGeometry x="0" y="155" width="400" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="cost_optimization" value="💰 Cost Optimization&#10;- Provider selection&#10;- Token usage monitoring&#10;- Response caching&#10;- Rate limiting" style="text;strokeColor=none;fillColor=#fff3e0;fontSize=11;spacing=5;" parent="ai_agent" vertex="1">
+          <mxGeometry x="0" y="190" width="400" height="35" as="geometry"/>
+        </mxCell>
+
+        <!-- Data Persistence Layer -->
+        <mxCell id="data_layer" value="DATA PERSISTENCE LAYER" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=40;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;fillColor=#fce4ec;strokeColor=#c2185b;" parent="1" vertex="1">
+          <mxGeometry x="50" y="860" width="450" height="200" as="geometry"/>
+        </mxCell>
+
+        <!-- Data Components -->
+        <mxCell id="postgresql" value="🗄️ PostgreSQL/SQLite Database&#10;- 15+ core tables&#10;- User management&#10;- Course content&#10;- Transactions&#10;- Analytics data" style="text;strokeColor=none;fillColor=#fce4ec;fontSize=11;spacing=5;" parent="data_layer" vertex="1">
+          <mxGeometry x="0" y="40" width="450" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="media_storage" value="📦 Media Storage (AWS S3)&#10;- Course videos/materials&#10;- Profile images&#10;- Certificates&#10;- File uploads" style="text;strokeColor=none;fillColor=#fce4ec;fontSize=11;spacing=5;" parent="data_layer" vertex="1">
+          <mxGeometry x="0" y="80" width="450" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="cache_redis" value="⚡ Redis Cache (Future)&#10;- Session storage&#10;- API response caching&#10;- ML model caching&#10;- Rate limiting" style="text;strokeColor=none;fillColor=#fce4ec;fontSize=11;spacing=5;" parent="data_layer" vertex="1">
+          <mxGeometry x="0" y="120" width="450" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="backup_system" value="🔄 Backup &amp; Recovery&#10;- Automated backups&#10;- Disaster recovery&#10;- Data migration&#10;- Version control" style="text;strokeColor=none;fillColor=#fce4ec;fontSize=11;spacing=5;" parent="data_layer" vertex="1">
+          <mxGeometry x="0" y="160" width="450" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- External Integrations -->
+        <mxCell id="external_integrations" value="EXTERNAL INTEGRATIONS &amp; APIs" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=40;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;fillColor=#f3e5f5;strokeColor=#7b1fa2;" parent="1" vertex="1">
+          <mxGeometry x="550" y="600" width="400" height="300" as="geometry"/>
+        </mxCell>
+
+        <!-- External Services -->
+        <mxCell id="ai_apis" value="🧠 AI &amp; ML APIs&#10;━━━━━━━━━━━━━━━━━━━━━&#10;• OpenAI GPT-4o-mini&#10;• Groq API (fast)&#10;• Ollama (local)&#10;• Google Gemini&#10;• Future: Claude, Mistral" style="text;strokeColor=none;fillColor=#f3e5f5;fontSize=10;spacing=3;" parent="external_integrations" vertex="1">
+          <mxGeometry x="0" y="40" width="400" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="payment_apis" value="💳 Payment Gateways&#10;━━━━━━━━━━━━━━━━━━━━━&#10;• Stripe API&#10;• PayPal API&#10;• Future: Razorpay, Adyen" style="text;strokeColor=none;fillColor=#f3e5f5;fontSize=10;spacing=3;" parent="external_integrations" vertex="1">
+          <mxGeometry x="0" y="90" width="400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="video_conferencing" value="🎥 Video Conferencing&#10;━━━━━━━━━━━━━━━━━━━━━&#10;• Zoom API&#10;• Meeting scheduling&#10;• Recording storage&#10;• Participant management" style="text;strokeColor=none;fillColor=#f3e5f5;fontSize=10;spacing=3;" parent="external_integrations" vertex="1">
+          <mxGeometry x="0" y="130" width="400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="communication" value="📧 Communication Services&#10;━━━━━━━━━━━━━━━━━━━━━&#10;• SendGrid Email&#10;• SMS API (future)&#10;• Push notifications&#10;• Webhooks" style="text;strokeColor=none;fillColor=#f3e5f5;fontSize=10;spacing=3;" parent="external_integrations" vertex="1">
+          <mxGeometry x="0" y="170" width="400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="cloud_services" value="☁️ Cloud Services&#10;━━━━━━━━━━━━━━━━━━━━━&#10;• AWS S3 Storage&#10;• CloudFront CDN&#10;• Future: Lambda, ECS" style="text;strokeColor=none;fillColor=#f3e5f5;fontSize=10;spacing=3;" parent="external_integrations" vertex="1">
+          <mxGeometry x="0" y="210" width="400" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="monitoring" value="📈 Monitoring &amp; Analytics&#10;━━━━━━━━━━━━━━━━━━━━━&#10;• Future: DataDog&#10;• Application metrics&#10;• Error tracking&#10;• Performance monitoring" style="text;strokeColor=none;fillColor=#f3e5f5;fontSize=10;spacing=3;" parent="external_integrations" vertex="1">
+          <mxGeometry x="0" y="250" width="400" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Deployment & Infrastructure -->
+        <mxCell id="deployment" value="DEPLOYMENT &amp; INFRASTRUCTURE" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=40;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;fillColor=#e3f2fd;strokeColor=#1976d2;" parent="1" vertex="1">
+          <mxGeometry x="1000" y="100" width="400" height="300" as="geometry"/>
+        </mxCell>
+
+        <!-- Deployment Components -->
+        <mxCell id="web_server" value="🌐 Web Server (Nginx)&#10;- Static file serving&#10;- Load balancing&#10;- SSL termination&#10;- Reverse proxy" style="text;strokeColor=none;fillColor=#e3f2fd;fontSize=11;spacing=5;" parent="deployment" vertex="1">
+          <mxGeometry x="0" y="40" width="400" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="app_server" value="⚙️ Application Server (Gunicorn)&#10;- Django application hosting&#10;- Process management&#10;- Auto-scaling&#10;- Health checks" style="text;strokeColor=none;fillColor=#e3f2fd;fontSize=11;spacing=5;" parent="deployment" vertex="1">
+          <mxGeometry x="0" y="75" width="400" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="database_server" value="🗄️ Database Server&#10;- PostgreSQL primary&#10;- Read replicas&#10;- Connection pooling&#10;- Backup automation" style="text;strokeColor=none;fillColor=#e3f2fd;fontSize=11;spacing=5;" parent="deployment" vertex="1">
+          <mxGeometry x="0" y="110" width="400" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="cache_server" value="⚡ Cache Server (Redis)&#10;- Session storage&#10;- API caching&#10;- ML model cache&#10;- Rate limiting" style="text;strokeColor=none;fillColor=#e3f2fd;fontSize=11;spacing=5;" parent="deployment" vertex="1">
+          <mxGeometry x="0" y="145" width="400" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="file_storage" value="📦 File Storage (AWS S3)&#10;- Media assets&#10;- Static files&#10;- CDN integration&#10;- Backup storage" style="text;strokeColor=none;fillColor=#e3f2fd;fontSize=11;spacing=5;" parent="deployment" vertex="1">
+          <mxGeometry x="0" y="180" width="400" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="monitoring_stack" value="📊 Monitoring Stack&#10;- Application metrics&#10;- Error tracking&#10;- Performance monitoring&#10;- Log aggregation" style="text;strokeColor=none;fillColor=#e3f2fd;fontSize=11;spacing=5;" parent="deployment" vertex="1">
+          <mxGeometry x="0" y="215" width="400" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="ci_cd" value="🔄 CI/CD Pipeline&#10;- Automated testing&#10;- Code deployment&#10;- Database migrations&#10;- Rollback procedures" style="text;strokeColor=none;fillColor=#e3f2fd;fontSize=11;spacing=5;" parent="deployment" vertex="1">
+          <mxGeometry x="0" y="250" width="400" height="35" as="geometry"/>
+        </mxCell>
+
+        <!-- Security Layer -->
+        <mxCell id="security" value="SECURITY &amp; COMPLIANCE" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=40;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;fillColor=#fff3e0;strokeColor=#f57c00;" parent="1" vertex="1">
+          <mxGeometry x="1000" y="420" width="400" height="250" as="geometry"/>
+        </mxCell>
+
+        <!-- Security Components -->
+        <mxCell id="authentication" value="🔐 Authentication &amp; Authorization&#10;- JWT tokens&#10;- Role-based access&#10;- Password policies&#10;- Multi-factor auth (future)" style="text;strokeColor=none;fillColor=#fff3e0;fontSize=11;spacing=5;" parent="security" vertex="1">
+          <mxGeometry x="0" y="40" width="400" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="data_encryption" value="🔒 Data Encryption&#10;- Database encryption&#10;- API data transmission&#10;- File storage encryption&#10;- Key management" style="text;strokeColor=none;fillColor=#fff3e0;fontSize=11;spacing=5;" parent="security" vertex="1">
+          <mxGeometry x="0" y="75" width="400" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="api_security" value="🛡️ API Security&#10;- Rate limiting&#10;- Input validation&#10;- SQL injection prevention&#10;- XSS protection" style="text;strokeColor=none;fillColor=#fff3e0;fontSize=11;spacing=5;" parent="security" vertex="1">
+          <mxGeometry x="0" y="110" width="400" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="compliance" value="📋 Compliance &amp; Audit&#10;- GDPR compliance&#10;- Data retention policies&#10;- Audit logging&#10;- Privacy protection" style="text;strokeColor=none;fillColor=#fff3e0;fontSize=11;spacing=5;" parent="security" vertex="1">
+          <mxGeometry x="0" y="145" width="400" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="backup_security" value="🔄 Backup &amp; Recovery&#10;- Encrypted backups&#10;- Disaster recovery&#10;- Business continuity&#10;- Incident response" style="text;strokeColor=none;fillColor=#fff3e0;fontSize=11;spacing=5;" parent="security" vertex="1">
+          <mxGeometry x="0" y="180" width="400" height="35" as="geometry"/>
+        </mxCell>
+
+        <!-- Performance & Scalability -->
+        <mxCell id="performance" value="PERFORMANCE &amp; SCALABILITY" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=40;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;fillColor=#e8f5e8;strokeColor=#388e3c;" parent="1" vertex="1">
+          <mxGeometry x="1000" y="690" width="400" height="200" as="geometry"/>
+        </mxCell>
+
+        <!-- Performance Components -->
+        <mxCell id="caching_strategy" value="⚡ Caching Strategy&#10;- Redis caching&#10;- Database query optimization&#10;- API response caching&#10;- Static asset optimization" style="text;strokeColor=none;fillColor=#e8f5e8;fontSize=11;spacing=5;" parent="performance" vertex="1">
+          <mxGeometry x="0" y="40" width="400" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="load_balancing" value="⚖️ Load Balancing&#10;- Nginx load balancer&#10;- Auto-scaling groups&#10;- Health checks&#10;- Session persistence" style="text;strokeColor=none;fillColor=#e8f5e8;fontSize=11;spacing=5;" parent="performance" vertex="1">
+          <mxGeometry x="0" y="75" width="400" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="database_optimization" value="🗄️ Database Optimization&#10;- Query optimization&#10;- Indexing strategy&#10;- Connection pooling&#10;- Read replicas" style="text;strokeColor=none;fillColor=#e8f5e8;fontSize=11;spacing=5;" parent="performance" vertex="1">
+          <mxGeometry x="0" y="110" width="400" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="cdn_integration" value="🌐 CDN Integration&#10;- Static asset delivery&#10;- Global distribution&#10;- Cache invalidation&#10;- Performance monitoring" style="text;strokeColor=none;fillColor=#e8f5e8;fontSize=11;spacing=5;" parent="performance" vertex="1">
+          <mxGeometry x="0" y="145" width="400" height="35" as="geometry"/>
+        </mxCell>
+
+        <!-- Connection Arrows -->
+        <!-- UI to API -->
+        <mxCell id="ui_to_api" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="student_dashboard" target="django_rest" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="275" y="320"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- API to Logic -->
+        <mxCell id="api_to_logic" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="django_rest" target="course_mgmt" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="275" y="540"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- API to AI -->
+        <mxCell id="api_to_ai" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="django_rest" target="intent_detection" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="525" y="540"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Logic to Data -->
+        <mxCell id="logic_to_data" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="course_mgmt" target="postgresql" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="275" y="860"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- AI Chat to AI Agent -->
+        <mxCell id="chat_to_ai" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" source="ai_chat_widget" target="intent_detection" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="750" y="190"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- AI Agent to External APIs -->
+        <mxCell id="ai_to_external" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" source="ai_providers" target="ai_apis" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="950" y="400"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- AI Persistence to Data -->
+        <mxCell id="ai_to_data" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="chat_persistence" target="postgresql" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="750" y="860"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Payment Service to Payment APIs -->
+        <mxCell id="payment_to_external" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" source="payment_svc" target="payment_apis" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="500" y="650"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Mentoring Service to Zoom -->
+        <mxCell id="mentoring_to_zoom" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" source="mentoring_svc" target="video_conferencing" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="500" y="690"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Notification Service to Communication -->
+        <mxCell id="notification_to_comm" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" source="notification_svc" target="communication" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="500" y="730"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Media Storage to Cloud Services -->
+        <mxCell id="media_to_cloud" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" source="media_storage" target="cloud_services" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="500" y="770"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend" value="LEGEND" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;fillColor=#f5f5f5;strokeColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="1450" y="100" width="300" height="200" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="legend_ui" value="🔵 User Interface Layer" style="text;strokeColor=none;fillColor=#f5f5f5;fontSize=11;" parent="legend" vertex="1">
+          <mxGeometry x="0" y="30" width="300" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend_api" value="🟣 API Gateway Layer" style="text;strokeColor=none;fillColor=#f5f5f5;fontSize=11;" parent="legend" vertex="1">
+          <mxGeometry x="0" y="55" width="300" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend_logic" value="🟢 Application Logic Layer" style="text;strokeColor=none;fillColor=#f5f5f5;fontSize=11;" parent="legend" vertex="1">
+          <mxGeometry x="0" y="80" width="300" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend_data" value="🔴 Data Persistence Layer" style="text;strokeColor=none;fillColor=#f5f5f5;fontSize=11;" parent="legend" vertex="1">
+          <mxGeometry x="0" y="105" width="300" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend_ai" value="🟠 AI Customer Support" style="text;strokeColor=none;fillColor=#f5f5f5;fontSize=11;" parent="legend" vertex="1">
+          <mxGeometry x="0" y="130" width="300" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend_external" value="🟣 External Integrations" style="text;strokeColor=none;fillColor=#f5f5f5;fontSize=11;" parent="legend" vertex="1">
+          <mxGeometry x="0" y="155" width="300" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend_deployment" value="🔵 Deployment &amp; Infrastructure" style="text;strokeColor=none;fillColor=#f5f5f5;fontSize=11;" parent="legend" vertex="1">
+          <mxGeometry x="0" y="180" width="300" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- Key Metrics -->
+        <mxCell id="metrics" value="KEY METRICS &amp; ACHIEVEMENTS" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;fillColor=#e8f5e8;strokeColor=#388e3c;" parent="1" vertex="1">
+          <mxGeometry x="1450" y="320" width="300" height="200" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="metric1" value="📊 9,000+ Lines of Code" style="text;strokeColor=none;fillColor=#e8f5e8;fontSize=11;" parent="metrics" vertex="1">
+          <mxGeometry x="0" y="30" width="300" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="metric2" value="🔗 50+ API Endpoints" style="text;strokeColor=none;fillColor=#e8f5e8;fontSize=11;" parent="metrics" vertex="1">
+          <mxGeometry x="0" y="50" width="300" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="metric3" value="🗄️ 15+ Database Tables" style="text;strokeColor=none;fillColor=#e8f5e8;fontSize=11;" parent="metrics" vertex="1">
+          <mxGeometry x="0" y="70" width="300" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="metric4" value="🤖 80% Faster AI Responses" style="text;strokeColor=none;fillColor=#e8f5e8;fontSize=11;" parent="metrics" vertex="1">
+          <mxGeometry x="0" y="90" width="300" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="metric5" value="💰 60% Cost Reduction" style="text;strokeColor=none;fillColor=#e8f5e8;fontSize=11;" parent="metrics" vertex="1">
+          <mxGeometry x="0" y="110" width="300" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="metric6" value="🎯 87% Recommendation Accuracy" style="text;strokeColor=none;fillColor=#e8f5e8;fontSize=11;" parent="metrics" vertex="1">
+          <mxGeometry x="0" y="130" width="300" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="metric7" value="⏱️ 165+ Development Hours" style="text;strokeColor=none;fillColor=#e8f5e8;fontSize=11;" parent="metrics" vertex="1">
+          <mxGeometry x="0" y="150" width="300" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="metric8" value="🔒 Enterprise-Grade Security" style="text;strokeColor=none;fillColor=#e8f5e8;fontSize=11;" parent="metrics" vertex="1">
+          <mxGeometry x="0" y="170" width="300" height="20" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

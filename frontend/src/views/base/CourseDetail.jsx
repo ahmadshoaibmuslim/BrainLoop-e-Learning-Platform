@@ -46,25 +46,45 @@ function CourseDetail() {
             .catch((err) => {
                 console.error(err); // Handle errors gracefully
                 setIsLoading(false);
+                setRecommendedCourses([]);
             });
     };
     
     const fetchRecommendedCourses = (courseId) => {
-        if (!courseId) return;  // Ensure course ID exists
+        if (!courseId) {
+            console.warn("No course ID provided for recommendations");
+            setRecommendedCourses([]);
+            return;
+        }
 
         useAxios()
             .get(`recommend-courses/${courseId}/`)
             .then((res) => {
-                setRecommendedCourses(res.data.recommended_courses);
+                console.log("Recommendations API Response:", res.data);
+
+                if (res.data?.recommended_courses && Array.isArray(res.data.recommended_courses)) {
+                    setRecommendedCourses(res.data.recommended_courses);
+                    console.log(`Loaded ${res.data.recommended_courses.length} recommended courses`);
+                } else {
+                    console.warn("Invalid recommendations response structure:", res.data);
+                    setRecommendedCourses([]);
+                }
             })
-            .catch((err) => console.error("Error fetching recommendations:", err));
+            .catch((err) => {
+                console.error("Error fetching recommendations:", err.response?.data || err.message);
+                setRecommendedCourses([]);
+            });
     };
 
 
     useEffect(() => {
-        fetchCourse();
+        if (param.slug) {
+            setIsLoading(true);
+            setRecommendedCourses([]);
+            fetchCourse();
+        }
 
-    }, []); // Dependency array remains empty as param won't change
+    }, [param.slug]);
 
     const addToCart = async (courseId, userId, price, country, cartId) => {
         setAddToCartBtn("Adding To Tart");
@@ -904,7 +924,7 @@ function CourseDetail() {
                                                             {/* Price and time */}
                                                             <div>
                                                                 <div className="d-flex align-items-center">
-                                                                    <h3 className="fw-bold mb-0 me-2">${course.price}</h3>
+                                                                    <h3 className="fw-bold mb-0 me-2">${Number(course.price).toFixed(2)}</h3>
                                                                 </div>
                                                             </div>
                                                             {/* Share button with dropdown */}
@@ -1063,11 +1083,17 @@ function CourseDetail() {
 
 {/* Recommended Courses Section */}
 <h2 className="mt-5">Recommended Courses</h2>
-            {recommendedCourses.length > 0 ? (
+            {recommendedCourses && recommendedCourses.length > 0 ? (
                 <div className="row">
                     <div className="col-md-12">
                         <div className="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
-                            {recommendedCourses.filter((recCourse) => recCourse.slug).map((recCourse) => (
+                                        {recommendedCourses.map((recCourse) => {
+                                            if (!recCourse.slug) {
+                                                console.warn("Skipping course without slug:", recCourse);
+                                                return null;
+                                            }
+
+                                            return (
                                 <div key={recCourse.id} className="col">
                                     {/* Course Card */}
                                     <div className="card card-hover">
@@ -1109,7 +1135,7 @@ function CourseDetail() {
                                         <div className="card-footer">
                                             <div className="row align-items-center g-0">
                                                 <div className="col">
-                                                    <h5 className="mb-0">${recCourse.price || "Free"}</h5>
+                                                    <h5 className="mb-0">${Number(recCourse.price).toFixed(2)}</h5>
                                                 </div>
                                                 <div className="col-auto">
                                                     <Link to="/cart/" className="text-inherit text-decoration-none btn btn-primary">
@@ -1121,7 +1147,8 @@ function CourseDetail() {
                                         </div>
                                     </div>
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 </div>

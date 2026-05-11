@@ -35,6 +35,8 @@ An enterprise-grade, AI-powered e-learning platform that unifies course manageme
 - ✅ Admin panel (Django Jazzmin)
 - ✅ ML-powered course recommendations
 
+![Student Dashboard](docs/images/student/Dashboard.png)
+
 ### 🎓 1:1 Mentoring System
 - ✅ Zoom video conferencing integration
 - ✅ Automated session scheduling
@@ -44,6 +46,12 @@ An enterprise-grade, AI-powered e-learning platform that unifies course manageme
 - ✅ Teacher availability management
 - ✅ Student booking interface
 
+![Mentoring Session - Student View](docs/images/Mentoring%20sessions/mentorin%20session%20student.png)
+
+![Mentoring Session Request](docs/images/Mentoring%20sessions/mentoring%20session%20request%20student.png)
+
+![Mentoring Session - Teacher View](docs/images/Mentoring%20sessions/mentoring%20session%20teacher.png)
+
 ### 🤖 AI Customer Support Agent
 - ✅ Multi-AI provider support (OpenAI, Claude, Gemini, etc.)
 - ✅ Intent classification (order status, refunds, course info, general chat)
@@ -52,6 +60,8 @@ An enterprise-grade, AI-powered e-learning platform that unifies course manageme
 - ✅ Context-aware responses
 - ✅ Analytics & reporting dashboard
 - ✅ Real-time support widget
+
+![AI Support Agent](docs/images/AI%20chat/AI%20Agnet.png)
 
 ### 🔒 Security & Performance
 - ✅ JWT-based authentication with refresh tokens
@@ -220,117 +230,26 @@ VITE_ZOOM_CLIENT_ID=your-zoom-client-id
 
 ---
 
-## 🖼️ Platform Screenshots & Images
+## 🖼️ Platform Screenshots
 
-### 📸 Where to Add Screenshots
+### 📸 Student Interface
+![Student Dashboard](docs/images/student/Dashboard.png)
 
-Screenshots should be organized in a dedicated `docs/images/` directory structure:
+### 📸 Teacher Interface
+![Teacher Dashboard](docs/images/teacher/Teacher%20Dashboard.png)
 
-```
-docs/
-├── images/
-│   ├── student/
-│   │   ├── home-page.png
-│   │   ├── course-detail.png
-│   │   ├── dashboard.png
-│   │   ├── mentoring-session.png
-│   │   └── chat-widget.png
-│   ├── teacher/
-│   │   ├── dashboard.png
-│   │   ├── course-management.png
-│   │   ├── earnings.png
-│   │   └── student-list.png
-│   ├── admin/
-│   │   ├── admin-panel.png
-│   │   ├── user-management.png
-│   │   ├── analytics.png
-│   │   └── course-approval.png
-│   ├── architecture/
-│   │   ├── system-architecture.png
-│   │   ├── database-schema.png
-│   │   └── api-flow.png
-│   └── features/
-│       ├── ai-chat-system.png
-│       ├── payment-flow.png
-│       ├── zoom-integration.png
-│       └── recommendation-engine.png
-```
+### 📸 Admin Interface
+![Admin Panel](docs/images/admin/Screenshot%202026-05-11%20124025.png)
 
-### 📝 How to Reference Images in README
+### 📸 Mentoring Sessions
+![Mentoring Session - Student View](docs/images/Mentoring%20sessions/mentorin%20session%20student.png)
 
-**Use relative paths for local images:**
-```markdown
-![Student Dashboard](docs/images/student/dashboard.png)
-```
+![Mentoring Session Request](docs/images/Mentoring%20sessions/mentoring%20session%20request%20student.png)
 
-**Use absolute URLs for hosted images:**
-```markdown
-![Instructor Dashboard](https://github.com/yourusername/brainloop/raw/main/docs/images/teacher/dashboard.png)
-```
+![Mentoring Session - Teacher View](docs/images/Mentoring%20sessions/mentoring%20session%20teacher.png)
 
-### 🎬 Screenshots to Include
-
-#### Student Interface
-- [ ] Home page with course browsing
-- [ ] Course detail page with ratings
-- [ ] Student dashboard with enrolled courses
-- [ ] Mentoring session interface
-- [ ] AI chat widget
-
-#### Teacher Interface
-- [ ] Teacher dashboard with statistics
-- [ ] Course management (create/edit)
-- [ ] Student list and earnings
-- [ ] Mentoring session scheduling
-
-#### Admin Interface
-- [ ] Admin panel overview
-- [ ] User management
-- [ ] Course approval workflow
-- [ ] Analytics dashboard
-
-#### Feature Demos
-- [ ] Payment checkout flow
-- [ ] Zoom video session
-- [ ] AI support routing
-- [ ] Search & recommendation
-
-### 📤 How to Upload Images to GitHub
-
-**Option 1: Direct GitHub Upload (Easiest)**
-```bash
-git add docs/images/
-git commit -m "Add platform screenshots"
-git push origin main
-```
-
-**Option 2: Create GitHub Issues & Drag Images**
-1. Create a GitHub issue
-2. Drag & drop images directly
-3. Copy the generated markdown links
-4. Paste into README
-
-**Generated URL will look like:**
-```
-https://github.com/yourusername/brainloop/raw/main/docs/images/student/dashboard.png
-```
-
-### 💡 Screenshot Best Practices
-
-✅ **DO:**
-- Capture full browser window (1920x1080 recommended)
-- Hide sensitive data (API keys, emails, passwords)
-- Use consistent window sizes
-- Add captions explaining what's shown
-- Include both light & dark themes (if available)
-- Show actual data, not just templates
-
-❌ **DON'T:**
-- Use pixelated or blurry images
-- Include personal information
-- Use inconsistent styling
-- Forget to compress images (keep < 500KB each)
-- Leave test/dummy data visible
+### 📸 AI Support Agent
+![AI Support Agent Chat](docs/images/AI%20chat/AI%20Agnet.png)
 
 ---
 
